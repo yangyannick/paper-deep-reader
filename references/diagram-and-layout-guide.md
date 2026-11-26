@@ -143,7 +143,7 @@ Use **only** when the paper provides an explicit analytical equation or measured
 `assets/widgets.js` enables these automatically on every assembled monograph:
 - **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ restrained Midnight Slate Dark toggle (persisted via `localStorage`).
 - **Frameless Editorial Left Sidebar**: Clean borderless section outline rail with quiet collapsible `本篇图表` / `核心公式` drawers below (hidden when 0 equations), plus mini progress bar and estimated reading time.
-- **Zero-Clutter Notes & Questions**: Selecting text in `.article-main` pops a tiny `✎ 批注 | ? 提问` pill; each `.fig-frame` gets a subtle `✎` note icon. Saved per-paper in `localStorage`; Masthead reveals `✎ 笔记 N` only when ≥1 note exists, with one-click Markdown copy / `.md` download.
+- **Zero-Clutter Marginalia & Exportable Notes**: Selecting any passage (including across inline `<code>` and KaTeX formulas) pops `✎ 批注 | ? 提问`; each `.fig-frame` gets a subtle `✎` icon (with inline `批注 / 疑问` switch). On wide screens (`≥ 1340px`), saved notes appear automatically as aligned right-margin marginalia linked to soft inline highlights (completely empty when 0 notes), while the Masthead `✎ 笔记 N` pill provides centralized review and one-click Markdown copy / `.md` download.
 - **120fps Vector Pan & Zoom Lightbox**: Works on every `.fig-frame` SVG or `<img>` (including cropped original figures and view-switched panels).
 
 ---

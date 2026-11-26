@@ -1024,22 +1024,38 @@
     });
   })();
 
-  // 9. Zero-Clutter Selection Notes & Figure Annotations + Markdown Export
+  // 9. Unified Selection Notes, Figure Annotations & Right-Margin Marginalia + Markdown Export
   (function initNotesAndAnnotations() {
     const STORAGE_KEY = 'pdr-notes:' + DOC_KEY;
-    let notes = [];
-    try {
-      const raw = lsGet(STORAGE_KEY, '[]');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) notes = parsed;
-    } catch (_) {
-      notes = [];
+    const shell = document.querySelector('.page-shell');
+    const article = document.querySelector('.article-main');
+    if (!article) return;
+
+    // Assign deterministic block IDs for precise anchoring across reloads (even across <code>/KaTeX)
+    const blockSelector = 'p, li, blockquote, h2, h3, .eq-box, figure.fig-frame, .table-wrap, .audit-card, .transfer-card, .exec-summary, .live-card';
+    Array.from(article.querySelectorAll(blockSelector)).forEach((b, i) => {
+      if (!b.dataset.pdrBlk) b.dataset.pdrBlk = 'blk_' + i;
+    });
+
+    // Create quiet right-margin rail (hidden when <1340px or when 0 notes)
+    let rail = shell ? shell.querySelector('.margin-rail') : null;
+    if (shell && !rail) {
+      rail = document.createElement('aside');
+      rail.className = 'margin-rail';
+      rail.setAttribute('aria-label', isZh ? '页边批注' : 'Margin notes');
+      shell.appendChild(rail);
     }
 
-    function persist() {
-      lsSet(STORAGE_KEY, JSON.stringify(notes));
-      syncNotesPill();
+    let notes = [];
+    function loadNotes() {
+      try {
+        const parsed = JSON.parse(lsGet(STORAGE_KEY, '[]'));
+        notes = Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        notes = [];
+      }
     }
+    loadNotes();
 
     let notesPill = null;
     function syncNotesPill() {
@@ -1054,6 +1070,233 @@
       notesPill.hidden = notes.length === 0;
       notesPill.textContent = ui.notesBtn(notes.length);
     }
+
+    function persistAndRender() {
+      lsSet(STORAGE_KEY, JSON.stringify(notes));
+      syncNotesPill();
+      renderMarginalia();
+      if (modalOverlay && modalOverlay.classList.contains('is-open')) renderNotesModal();
+    }
+
+    // Extract clean quote text without duplicated .katex-mathml nodes
+    function extractCleanQuote(range) {
+      const frag = range.cloneContents();
+      frag.querySelectorAll('.katex-mathml, script, style').forEach(el => el.remove());
+      return (frag.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    // Walk visible text units inside a block (skipping .katex-mathml / UI buttons / SVG)
+    function collectTextSegments(scope) {
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const p = node.parentElement;
+          if (!p || p.closest('.katex-mathml, svg, button, script, style, .fig-actions, .tbl-tools, .steps-bar')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return node.nodeValue ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+        },
+      });
+      const segments = [];
+      let full = '';
+      let n;
+      while ((n = walker.nextNode())) {
+        const raw = n.nodeValue;
+        for (let i = 0; i < raw.length; i++) {
+          const ch = raw[i];
+          const isWs = /\s/.test(ch);
+          if (isWs && (full.endsWith(' ') || full.length === 0)) continue;
+          segments.push({ node: n, offset: i });
+          full += isWs ? ' ' : ch;
+        }
+      }
+      return { segments, full };
+    }
+
+    function unwrapHighlights() {
+      article.querySelectorAll('.pdr-hl-katex').forEach(el => {
+        el.classList.remove('pdr-hl-katex', 'is-ask', 'is-linked');
+        delete el.dataset.noteId;
+      });
+      article.querySelectorAll('mark.pdr-hl').forEach(mk => {
+        const parent = mk.parentNode;
+        if (!parent) return;
+        while (mk.firstChild) parent.insertBefore(mk.firstChild, mk);
+        parent.removeChild(mk);
+        parent.normalize();
+      });
+    }
+
+    function highlightNote(note) {
+      if (!note.quote || note.quote.length < 2) return null;
+      let scope =
+        (note.anchorBlk && article.querySelector('[data-pdr-blk="' + note.anchorBlk + '"]')) ||
+        (note.targetId && document.getElementById(note.targetId)) ||
+        article;
+      let { segments, full } = collectTextSegments(scope);
+      const q = note.quote.replace(/\s+/g, ' ').trim();
+      let hit = full.indexOf(q);
+      if (hit === -1 && scope !== article) {
+        scope = article;
+        ({ segments, full } = collectTextSegments(scope));
+        hit = full.indexOf(q);
+      }
+      if (hit === -1) return null;
+
+      const katexHits = new Set();
+      const perNode = new Map();
+      for (let k = hit; k < hit + q.length && k < segments.length; k++) {
+        const seg = segments[k];
+        const pEl = seg.node.parentElement;
+        const kSpan = pEl && pEl.closest('.katex');
+        if (kSpan) {
+          katexHits.add(kSpan);
+          continue;
+        }
+        if (pEl && pEl.closest('mark.pdr-hl')) continue;
+        const cur = perNode.get(seg.node);
+        if (!cur) perNode.set(seg.node, { start: seg.offset, end: seg.offset + 1 });
+        else cur.end = seg.offset + 1;
+      }
+
+      let firstEl = null;
+      katexHits.forEach(ks => {
+        ks.classList.add('pdr-hl-katex');
+        if (note.kind === 'ask') ks.classList.add('is-ask');
+        ks.dataset.noteId = note.id;
+        if (!firstEl) firstEl = ks;
+      });
+
+      Array.from(perNode.entries()).reverse().forEach(([textNode, span]) => {
+        try {
+          const r = document.createRange();
+          r.setStart(textNode, span.start);
+          r.setEnd(textNode, span.end);
+          const mk = document.createElement('mark');
+          mk.className = 'pdr-hl' + (note.kind === 'ask' ? ' is-ask' : '');
+          mk.dataset.noteId = note.id;
+          r.surroundContents(mk);
+          firstEl = mk;
+        } catch (_) {}
+      });
+      return firstEl;
+    }
+
+    function setLinked(noteId, on, isAsk) {
+      if (rail) {
+        const card = rail.querySelector('.mn-card[data-note-id="' + noteId + '"]');
+        if (card) card.classList.toggle('is-linked', on);
+      }
+      const hls = article.querySelectorAll('[data-note-id="' + noteId + '"]');
+      hls.forEach(el => el.classList.toggle('is-linked', on));
+      if (!hls.length) {
+        const item = notes.find(n => n.id === noteId);
+        if (item && item.targetId) {
+          const fig = document.getElementById(item.targetId);
+          if (fig && fig.classList.contains('fig-frame')) {
+            fig.classList.toggle(isAsk ? 'is-mn-linked-ask' : 'is-mn-linked', on);
+          }
+        }
+      }
+    }
+
+    let marginEntries = [];
+    function layoutMarginCards() {
+      if (!rail || !marginEntries.length) return;
+      const rTop = rail.getBoundingClientRect().top;
+      const items = marginEntries
+        .filter(e => e.anchor && document.body.contains(e.anchor))
+        .map(e => ({ card: e.card, y: Math.max(0, e.anchor.getBoundingClientRect().top - rTop) }))
+        .sort((a, b) => a.y - b.y);
+      let cursor = 0;
+      items.forEach(item => {
+        const top = Math.max(item.y, cursor);
+        item.card.style.top = top.toFixed(0) + 'px';
+        cursor = top + item.card.offsetHeight + 14;
+      });
+    }
+
+    function renderMarginalia() {
+      unwrapHighlights();
+      marginEntries = [];
+      if (rail) rail.innerHTML = '';
+      if (!notes.length) return;
+
+      notes.forEach(n => {
+        const hl = highlightNote(n);
+        const anchor =
+          hl ||
+          (n.anchorBlk ? article.querySelector('[data-pdr-blk="' + n.anchorBlk + '"]') : null) ||
+          (n.targetId ? document.getElementById(n.targetId) : null);
+
+        const hls = article.querySelectorAll('[data-note-id="' + n.id + '"]');
+        hls.forEach(el => {
+          el.addEventListener('mouseenter', () => setLinked(n.id, true, n.kind === 'ask'));
+          el.addEventListener('mouseleave', () => setLinked(n.id, false, n.kind === 'ask'));
+          el.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            if (window.innerWidth < 1340) {
+              openNotesModal();
+            } else if (rail) {
+              const c = rail.querySelector('.mn-card[data-note-id="' + n.id + '"]');
+              if (c) { c.classList.toggle('is-expanded'); layoutMarginCards(); }
+            }
+          });
+        });
+
+        if (!rail || !anchor) return;
+        const card = document.createElement('div');
+        card.className = 'mn-card' + (n.kind === 'ask' ? ' is-ask' : '');
+        card.dataset.noteId = n.id;
+
+        const shortCtx = n.ctx ? n.ctx.split('·')[0].trim() : '';
+        const head = document.createElement('div');
+        head.className = 'mn-head';
+        const dot = document.createElement('span');
+        dot.className = 'mn-dot';
+        const kindSpan = document.createElement('span');
+        kindSpan.className = 'mn-kind';
+        kindSpan.textContent = n.kind === 'ask' ? ui.tagAsk : ui.tagNote;
+        head.append(dot, kindSpan);
+        if (shortCtx) {
+          const ctxSpan = document.createElement('span');
+          ctxSpan.className = 'mn-ctx';
+          ctxSpan.textContent = shortCtx;
+          ctxSpan.title = n.ctx;
+          head.appendChild(ctxSpan);
+        }
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'mn-del';
+        delBtn.textContent = '×';
+        delBtn.title = ui.del;
+        delBtn.setAttribute('aria-label', ui.del);
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          notes = notes.filter(x => x.id !== n.id);
+          persistAndRender();
+        });
+        head.appendChild(delBtn);
+
+        const body = document.createElement('p');
+        body.className = 'mn-body';
+        body.textContent = n.text;
+
+        card.append(head, body);
+        card.addEventListener('mouseenter', () => setLinked(n.id, true, n.kind === 'ask'));
+        card.addEventListener('mouseleave', () => setLinked(n.id, false, n.kind === 'ask'));
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.mn-del')) return;
+          card.classList.toggle('is-expanded');
+          layoutMarginCards();
+        });
+
+        rail.appendChild(card);
+        marginEntries.push({ card, anchor });
+      });
+
+      layoutMarginCards();
+    }
+
     syncNotesPill();
 
     // Add quiet note trigger on every figure frame
@@ -1071,47 +1314,85 @@
         e.stopPropagation();
         const titleEl = frame.querySelector('.fig-title');
         const ctx = titleEl ? titleEl.textContent.trim() : frame.id;
-        openComposer({ kind: 'note', ctx: ctx, quote: '', targetId: frame.id, anchorRect: btn.getBoundingClientRect() });
+        openComposer({
+          kind: 'note',
+          ctx: ctx,
+          quote: '',
+          targetId: frame.id,
+          anchorBlk: frame.dataset.pdrBlk || '',
+          anchorRect: btn.getBoundingClientRect(),
+        });
       });
       const zoomBtn = actions.querySelector('[data-zoom-btn]');
       if (zoomBtn) actions.insertBefore(btn, zoomBtn);
       else actions.appendChild(btn);
     });
 
-    // Selection mini popover
+    // Selection mini popover & composer
     let selPop = null;
     let notePop = null;
     function closeSelPop() { if (selPop) { selPop.remove(); selPop = null; } }
     function closeNotePop() { if (notePop) { notePop.remove(); notePop = null; } }
 
-    function nearestContext(node) {
+    function findAnchorBlock(node) {
       const el = node && node.nodeType === 1 ? node : (node && node.parentElement);
-      if (!el) return { ctx: document.title, targetId: '' };
+      if (!el) return null;
       const fig = el.closest('figure.fig-frame');
-      if (fig) {
-        const ft = fig.querySelector('.fig-title');
-        return { ctx: ft ? ft.textContent.trim() : fig.id, targetId: fig.id || '' };
-      }
-      const sec = el.closest('section');
-      if (sec) {
-        const h2 = sec.querySelector('h2');
-        return { ctx: h2 ? h2.textContent.replace(/\s+/g, ' ').trim() : sec.id, targetId: sec.id || '' };
-      }
-      return { ctx: document.title, targetId: '' };
+      if (fig) return fig;
+      const eq = el.closest('.eq-box');
+      if (eq) return eq;
+      return el.closest('[data-pdr-blk]') || el.closest('section') || null;
     }
 
-    function openComposer({ kind, ctx, quote, targetId, anchorRect }) {
+    function contextFromBlock(blk) {
+      if (!blk) return { ctx: document.title, targetId: '', anchorBlk: '' };
+      const fig = blk.closest('figure.fig-frame');
+      if (fig) {
+        const ft = fig.querySelector('.fig-title');
+        return { ctx: ft ? ft.textContent.trim() : fig.id, targetId: fig.id || '', anchorBlk: fig.dataset.pdrBlk || '' };
+      }
+      const eq = blk.closest('.eq-box');
+      if (eq) {
+        const elbl = eq.querySelector('.eq-label > span:first-child') || eq.querySelector('.eq-label');
+        return { ctx: elbl ? elbl.textContent.replace(/\s+/g, ' ').trim() : eq.id, targetId: eq.id || '', anchorBlk: eq.dataset.pdrBlk || '' };
+      }
+      const sec = blk.closest('section');
+      const h2 = sec && sec.querySelector('h2');
+      return {
+        ctx: h2 ? h2.textContent.replace(/\s+/g, ' ').trim() : document.title,
+        targetId: (sec && sec.id) || '',
+        anchorBlk: blk.dataset.pdrBlk || '',
+      };
+    }
+
+    function openComposer({ kind, ctx, quote, targetId, anchorBlk, anchorRect }) {
       closeSelPop();
       closeNotePop();
 
+      let curKind = kind || 'note';
       notePop = document.createElement('div');
       notePop.className = 'pdr-note-pop';
       notePop.setAttribute('role', 'dialog');
 
+      const topRow = document.createElement('div');
+      topRow.className = 'pdr-note-kind-row';
       const ctxEl = document.createElement('div');
       ctxEl.className = 'pdr-note-ctx';
-      ctxEl.textContent = (kind === 'ask' ? ui.tagAsk : ui.tagNote) + ' · ' + ctx;
-      notePop.appendChild(ctxEl);
+      ctxEl.textContent = ctx;
+
+      const kSw = document.createElement('span');
+      kSw.className = 'pdr-kind-switch';
+      const kNote = document.createElement('button');
+      kNote.type = 'button';
+      kNote.dataset.k = 'note';
+      kNote.textContent = ui.tagNote;
+      const kAsk = document.createElement('button');
+      kAsk.type = 'button';
+      kAsk.dataset.k = 'ask';
+      kAsk.textContent = ui.tagAsk;
+      kSw.append(kNote, kAsk);
+      topRow.append(ctxEl, kSw);
+      notePop.appendChild(topRow);
 
       if (quote) {
         const qEl = document.createElement('blockquote');
@@ -1121,8 +1402,16 @@
       }
 
       const ta = document.createElement('textarea');
-      ta.placeholder = kind === 'ask' ? ui.askPlaceholder : ui.notePlaceholder;
       notePop.appendChild(ta);
+
+      function syncKindUi() {
+        kNote.classList.toggle('is-active', curKind === 'note');
+        kAsk.classList.toggle('is-active', curKind === 'ask');
+        ta.placeholder = curKind === 'ask' ? ui.askPlaceholder : ui.notePlaceholder;
+      }
+      kNote.addEventListener('click', () => { curKind = 'note'; syncKindUi(); ta.focus(); });
+      kAsk.addEventListener('click', () => { curKind = 'ask'; syncKindUi(); ta.focus(); });
+      syncKindUi();
 
       const act = document.createElement('div');
       act.className = 'pdr-note-actions';
@@ -1141,15 +1430,16 @@
         if (!txt) { closeNotePop(); return; }
         notes.push({
           id: 'n_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-          kind: kind,
+          kind: curKind,
           ctx: ctx,
           quote: quote,
           text: txt,
           targetId: targetId,
+          anchorBlk: anchorBlk || '',
           ts: new Date().toISOString().slice(0, 16).replace('T', ' '),
         });
-        persist();
         closeNotePop();
+        persistAndRender();
         showToast(ui.noteSaved);
       }
       btnSave.addEventListener('click', doSave);
@@ -1172,53 +1462,71 @@
       ta.focus();
     }
 
-    const article = document.querySelector('.article-main');
-    if (article) {
-      article.addEventListener('mouseup', (e) => {
-        if (e.target.closest('button, input, textarea, select, .pdr-sel-pop, .pdr-note-pop, .tbl-tools, .steps-bar')) return;
-        setTimeout(() => {
-          const sel = window.getSelection();
-          if (!sel || sel.isCollapsed || !sel.rangeCount) { closeSelPop(); return; }
-          const text = sel.toString().replace(/\s+/g, ' ').trim();
-          if (text.length < 4 || text.length > 520) { closeSelPop(); return; }
-          const range = sel.getRangeAt(0);
-          if (!article.contains(range.commonAncestorContainer)) { closeSelPop(); return; }
-          const rect = range.getBoundingClientRect();
-          if (!rect || (!rect.width && !rect.height)) return;
+    function handleSelection(e) {
+      if (e && e.target && e.target.closest && e.target.closest('button, input, textarea, select, .pdr-sel-pop, .pdr-note-pop, .pdr-modal-overlay, .tbl-tools, .steps-bar, .margin-rail')) return;
+      setTimeout(() => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || !sel.rangeCount) { closeSelPop(); return; }
+        const range = sel.getRangeAt(0);
+        const intersects =
+          article.contains(range.commonAncestorContainer) ||
+          article.contains(range.startContainer) ||
+          article.contains(range.endContainer);
+        if (!intersects) { closeSelPop(); return; }
 
-          closeSelPop();
-          const info = nearestContext(range.commonAncestorContainer);
-          selPop = document.createElement('div');
-          selPop.className = 'pdr-sel-pop';
-          const bNote = document.createElement('button');
-          bNote.type = 'button';
-          bNote.textContent = ui.selNote;
-          bNote.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            openComposer({ kind: 'note', ctx: info.ctx, quote: text, targetId: info.targetId, anchorRect: rect });
-          });
-          const bAsk = document.createElement('button');
-          bAsk.type = 'button';
-          bAsk.textContent = ui.selAsk;
-          bAsk.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            openComposer({ kind: 'ask', ctx: info.ctx, quote: text, targetId: info.targetId, anchorRect: rect });
-          });
-          selPop.append(bNote, bAsk);
-          document.body.appendChild(selPop);
-          const sw = selPop.offsetWidth;
-          const left = Math.max(10, Math.min(rect.left + window.scrollX + rect.width / 2 - sw / 2, window.scrollX + window.innerWidth - sw - 10));
-          const top = Math.max(8, rect.top + window.scrollY - selPop.offsetHeight - 8);
-          selPop.style.left = left.toFixed(0) + 'px';
-          selPop.style.top = top.toFixed(0) + 'px';
-        }, 12);
-      });
+        const text = extractCleanQuote(range);
+        if (text.length < 2 || text.length > 1200) { closeSelPop(); return; }
+
+        const rects = Array.from(range.getClientRects()).filter(r => r.width > 0 && r.height > 0);
+        const rect = rects[0] || range.getBoundingClientRect();
+        if (!rect || (!rect.width && !rect.height)) return;
+
+        const blk = findAnchorBlock(range.startContainer) || findAnchorBlock(range.commonAncestorContainer);
+        const info = contextFromBlock(blk);
+
+        closeSelPop();
+        selPop = document.createElement('div');
+        selPop.className = 'pdr-sel-pop';
+        const bNote = document.createElement('button');
+        bNote.type = 'button';
+        bNote.textContent = ui.selNote;
+        bNote.addEventListener('mousedown', (ev) => ev.preventDefault());
+        bNote.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          openComposer({ kind: 'note', ctx: info.ctx, quote: text, targetId: info.targetId, anchorBlk: info.anchorBlk, anchorRect: rect });
+        });
+        const bAsk = document.createElement('button');
+        bAsk.type = 'button';
+        bAsk.textContent = ui.selAsk;
+        bAsk.addEventListener('mousedown', (ev) => ev.preventDefault());
+        bAsk.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          openComposer({ kind: 'ask', ctx: info.ctx, quote: text, targetId: info.targetId, anchorBlk: info.anchorBlk, anchorRect: rect });
+        });
+        selPop.append(bNote, bAsk);
+        document.body.appendChild(selPop);
+        const sw = selPop.offsetWidth;
+        const left = Math.max(10, Math.min(rect.left + window.scrollX + rect.width / 2 - sw / 2, window.scrollX + window.innerWidth - sw - 10));
+        const top = Math.max(8, rect.top + window.scrollY - selPop.offsetHeight - 8);
+        selPop.style.left = left.toFixed(0) + 'px';
+        selPop.style.top = top.toFixed(0) + 'px';
+      }, 20);
     }
 
+    document.addEventListener('mouseup', handleSelection);
+    document.addEventListener('keyup', (e) => {
+      if (e.shiftKey) handleSelection(e);
+    });
     document.addEventListener('mousedown', (e) => {
       if (selPop && !selPop.contains(e.target)) closeSelPop();
-      if (notePop && !notePop.contains(e.target) && !e.target.closest('.fig-note-btn')) closeNotePop();
+      if (notePop && !notePop.contains(e.target) && !e.target.closest('.fig-note-btn, .pdr-sel-pop')) closeNotePop();
     });
+
+    window.addEventListener('load', () => setTimeout(renderMarginalia, 80));
+    window.addEventListener('resize', layoutMarginCards);
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(layoutMarginCards).observe(article);
+    }
 
     function buildNotesMarkdown() {
       const lines = ['# ' + (document.title || 'Paper Reading Notes'), ''];
@@ -1271,8 +1579,7 @@
         document.getElementById('pdr-nm-clear').addEventListener('click', () => {
           if (!notes.length || window.confirm(ui.confirmClear)) {
             notes = [];
-            persist();
-            renderNotesModal();
+            persistAndRender();
           }
         });
       }
@@ -1306,14 +1613,17 @@
         const right = document.createElement('span');
         right.style.display = 'inline-flex';
         right.style.gap = '0.35rem';
-        if (item.targetId && document.getElementById(item.targetId)) {
+        const locEl =
+          (item.anchorBlk && article.querySelector('[data-pdr-blk="' + item.anchorBlk + '"]')) ||
+          (item.targetId && document.getElementById(item.targetId));
+        if (locEl) {
           const bLoc = document.createElement('button');
           bLoc.type = 'button';
           bLoc.className = 'tbl-btn';
           bLoc.textContent = ui.locate;
           bLoc.addEventListener('click', () => {
             closeNotesModal();
-            jumpToElement(document.getElementById(item.targetId), false);
+            jumpToElement(locEl, false);
           });
           right.appendChild(bLoc);
         }
@@ -1323,8 +1633,7 @@
         bDel.textContent = ui.del;
         bDel.addEventListener('click', () => {
           notes.splice(idx, 1);
-          persist();
-          renderNotesModal();
+          persistAndRender();
         });
         right.appendChild(bDel);
         head.append(left, right);

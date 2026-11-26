@@ -67,8 +67,9 @@ def main() -> None:
             msg = f"AI cliche / whiteboard slang found: '{phrase}'"
             (errors if args.strict_cliches else warnings).append(msg)
 
-    # 4. Duplicate IDs across DOM + SVGs
-    all_ids = re.findall(r'\bid="([^"]+)"', text)
+    # 4. Duplicate IDs across DOM + SVGs (strip <script>/<style> and ignore data-*-id attrs)
+    dom_only = re.sub(r"<script\b.*?</script>|<style\b.*?</style>", "", text, flags=re.S)
+    all_ids = re.findall(r'(?<![\w-])id="([^"]+)"', dom_only)
     dups = {k: v for k, v in Counter(all_ids).items() if v > 1}
     if dups:
         errors.append(f"Duplicate DOM/SVG IDs ({len(dups)}): {list(dups.items())[:8]}")
