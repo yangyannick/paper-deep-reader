@@ -1,217 +1,180 @@
 # paper-deep-reader
 
-**English** | [简体中文](README.zh-CN.md)
+**简体中文** | [English](README.en.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-4A7C7E.svg)](LICENSE)
-[![Agent Skills Compatible](https://img.shields.io/badge/Agent_Skills-Claude_Code_%7C_Codex_%7C_Cursor_%7C_Antigravity-B86B52.svg)](#quick-start)
-[![Output](https://img.shields.io/badge/Output-Single--File_Interactive_HTML-5E8C61.svg)](#live-preview--visual-showcase)
+[![Agent Skills](https://img.shields.io/badge/Agent_Skills-Claude_Code_%7C_Codex_%7C_Cursor_%7C_Antigravity-B86B52.svg)](#快速开始)
+[![Output](https://img.shields.io/badge/Output-Single--File_Interactive_HTML-5E8C61.svg)](#效果预览)
 
-> **Transform any research paper PDF (local file, arXiv ID, Open-Access DOI, or Zotero item) into a standalone, self-contained interactive HTML deep-reading monograph** — featuring Warm Paper Morandi editorial typography, page-by-page visually verified equations & tables, precision vector mechanism diagrams, publication-grade Matplotlib SVG plots, interactive data explorers, and a 120fps vector pan/zoom lightbox.
+一个面向科研论文深度精读的 Agent Skill。输入本地 PDF、arXiv、开放获取 DOI 或 Zotero 文献，生成单个可离线打开的交互式 HTML 精读长文——包含逐页视觉核对的公式与实验数据、矢量机制图、Matplotlib 统计图，以及支持滚轮缩放与拖拽平移的矢量图表灯箱。
 
 ---
 
-## Live Preview & Visual Showcase
+## 效果预览
 
-- **Online Interactive Demo (GitHub Pages)**: [**View Pinho (2002) Deep-Reading Monograph**](https://yangyannick.github.io/paper-deep-reader/examples/pinho-2002-demo.html)
-- **Local Offline File**: Open [`examples/pinho-2002-demo.html`](examples/pinho-2002-demo.html) directly in any browser (no server or build step needed).
+- **在线交互预览（GitHub Pages）**：[Pinho (2002) 完整精读页面](https://yangyannick.github.io/paper-deep-reader/examples/pinho-2002-demo.html)
+- **本地离线查看**：直接在浏览器中打开 [`examples/pinho-2002-demo.html`](examples/pinho-2002-demo.html)
 
-Both showcase a complete standalone output built from Pinho (2002), *IEEE Signal Processing Letters*, Vol. 9, No. 1, pp. 5–7.
+示例基于 Pinho (2002), *IEEE Signal Processing Letters*, Vol. 9, No. 1, pp. 5–7 生成，单文件约 250 KB，无需服务器或构建步骤。
 
-| Editorial Monograph & Sticky TOC | Precision Vector Architecture & Interactive Stepper |
+| 刊物风格排版与悬浮目录 | 矢量架构图与交互式步进演示 |
 | :---: | :---: |
-| ![Editorial Hero and Summary](docs/images/preview-hero.png) | ![Interactive Stepper and Vector Architecture](docs/images/preview-interactive.png) |
-| **Full-Width Matplotlib Vector Charts** | **Interactive Data Explorer & Evidence Boundary Audit** |
-| ![Full-Width Vector Plots](docs/images/preview-charts.png) | ![Interactive Data Table and Audit](docs/images/preview-table-audit.png) |
+| ![刊物排版与核心摘要](docs/images/preview-hero.png) | ![矢量架构图与交互步进演示](docs/images/preview-interactive.png) |
+| **全宽 Matplotlib 矢量统计图** | **极值个案对比与交互式数据表** |
+| ![全宽矢量统计图](docs/images/preview-charts.png) | ![交互数据表与个案对比](docs/images/preview-table-audit.png) |
 
 ---
 
-## Why `paper-deep-reader`?
+## 核心特性
 
-Most AI paper-reading tools force an uncomfortable trade-off:
-- **Plain Markdown summaries** lose mathematical visual intuition, interactive exploration, and chart clarity.
-- **Generic HTML / diagram skills** often shrink prose into terse slide captions, ship cold English-centric CSS that breaks on CJK academic reading, leak noisy meta-QA stamps into the UI, or stall browsers with render-blocking fonts and heavy blur filters.
-
-`paper-deep-reader` combines four disciplines into one portable Agent Skill:
-1. **Visual Grounding Before Writing**: Renders key PDF pages to PNGs via PyMuPDF and visually inspects formulas, multi-column tables, and footnotes before drafting—eliminating OCR hallucinations.
-2. **Editorial Warm Paper Morandi Layout**: `#F7F5F0` warm paper ground, `#FFFFFF` cards, muted Teal / Sage / Terracotta / Ochre accents, sticky TOC sidebar, flush 4-KPI hero strip, KaTeX math, zero render-blocking Google Fonts, and zero `backdrop-filter` scroll jank.
-3. **Silent Deep-Audit Rigor**: Enforces concrete worked numerical micro-examples, component role hierarchy analysis, and evidence-boundary checks (downplayed regressions, weighted-average skews, unmeasured costs) written as restrained academic prose rather than cluttered QA badges.
-4. **Adaptive Vector Visuals & 120fps Lightbox**: Selects visual widgets by paper archetype (algorithm steppers, architecture pipelines, small multiples, error-budget plots), splits dense 15+ sample charts into full-width vector SVGs, and equips every figure with a cursor-anchored wheel-zoom (`50%–500%`) + drag-pan vector lightbox.
-5. **Single-File Portable Delivery**: Bundles all CSS, JS, and vector SVGs into one ~200–300 KB `.html` file that opens instantaneously offline on desktop or mobile.
+- **逐页视觉核验，拒绝编造数据**：先用 PyMuPDF 将关键页渲染为 PNG 逐页核对公式、多栏表格与脚注，再动笔撰写，避免纯文本抽取错位。
+- **刊物级长文阅读体验**：采用暖纸低饱和配色、左侧悬浮目录、KaTeX 数学排版与零阻塞加载策略（无外链 Google Fonts、无拖帧毛玻璃），长文和复杂图表也能秒开顺滑滚动。
+- **按论文类型自适应生成可视化与交互**：离散算法类自动配步进状态机与交互沙盒，架构/系统类配联动高亮矢量图与对比卡片，数据密集型图表自动拆分为全宽 Matplotlib 矢量 SVG，所有图表内置滚轮缩放（50%–500%）与拖拽平移灯箱。
+- **有深度的方法剖析，无冗余标记**：正文保留完整的数值微算例、关键设计取舍与实验局限性分析，不堆砌 AI 套话或多余的校验角标。
+- **单文件便携交付，零硬依赖输入**：CSS、JS 与矢量 SVG 全部内联进单个 ~250 KB 的 `.html` 文件；支持本地 PDF、arXiv、开放获取 DOI 与 Zotero 7+ 本地文献库，无需强制安装额外 MCP 或插件。
 
 ---
 
-## Supported Paper Inputs (Zero Hard Dependencies)
+## 快速开始
 
-| Input Source | Extra Plugin Needed? | How It Works |
-| :--- | :---: | :--- |
-| **Local PDF** (`path/to/paper.pdf`) | None | Default path. Reads and renders PDF pages directly via `scripts/extract_pdf.py`. |
-| **arXiv ID / URL** (`1706.03762`, `arxiv.org/abs/...`) | None | Built-in `scripts/fetch_paper.py` (Python stdlib only) pulls Atom metadata and downloads the PDF. |
-| **Open-Access DOI** (`10.1038/...`) | None | `scripts/fetch_paper.py` queries Crossref metadata + legal OA sources (OpenAlex, Europe PMC, Semantic Scholar, optional Unpaywall). |
-| **Paywalled DOI** (`10.1109/...`) | None | Saves verified bibliographic metadata (`exit 2`) and asks you for a local PDF or Zotero entry—never hallucinates from abstracts or uses unauthorized sources. |
-| **Zotero 7 Local Library** | None | `scripts/fetch_paper.py --zotero-query` / `--zotero-key` talks directly to Zotero 7's local API (`127.0.0.1:23119`) and resolves local PDF attachments & notes. |
-| **`zotero-cli` / `zotero-mcp`** | Optional | Automatically used if already installed in your environment. |
+### 1. 安装 Skill
 
----
-
-## Quick Start
-
-### 1. Install the Skill
-
-Works with **Claude Code**, **Codex**, **Cursor**, **Antigravity**, and any Agent Skills–compatible assistant:
+兼容 **Claude Code**、**Codex**、**Cursor**、**Antigravity** 及支持 Agent Skills 规范的助手：
 
 ```bash
-# Option A: Install via skills CLI
+# 方式一：通过 skills CLI 安装
 npx skills add yangyannick/paper-deep-reader
 
-# Option B: Clone directly into your local skills directory
+# 方式二：直接克隆到本地 skills 目录
 git clone https://github.com/yangyannick/paper-deep-reader.git ~/.agents/skills/paper-deep-reader
 ```
 
-> **Note on explicit invocation**: `paper-deep-reader` is configured for explicit invocation so it never hijacks quick paper questions or casual chat. Trigger it by naming `paper-deep-reader` / `$paper-deep-reader` or asking for an interactive HTML deep-reading page.
+> 本 Skill 默认配置为显式触发，不会在你随口询问论文问题时误启动。使用时在提示词中提及 `paper-deep-reader` / `$paper-deep-reader`，或明确要求生成交互式 HTML 精读页面即可。
 
-### 2. Install Lightweight Python Dependencies
+### 2. 安装 Python 依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-- **Core** (`requirements.txt`): `pymupdf`, `matplotlib`, `numpy`, `pillow` (used for Stage 1 PDF page rendering and Stage 3 publication-grade vector plots). `scripts/fetch_paper.py` uses Python's standard library only.
-- **Optional QA tools**: Node.js (`node --check` for JS syntax verification) and any local Chrome / Chromium / Edge browser (auto-detected across Windows, macOS, and Linux for headless 1440px visual QA).
+- **核心依赖**：`pymupdf`、`matplotlib`、`numpy`、`pillow`（用于 PDF 渲染与矢量统计图）。论文拉取脚本 `scripts/fetch_paper.py` 仅使用 Python 标准库，无额外依赖。
+- **可选质检环境**：Node.js（用于 `node --check` 校验内联 JS 语法）及本机 Chrome / Chromium / Edge（自动探测，用于 1440px 无头截图审查）。
 
 ---
 
-## Usage Examples
+## 支持的输入源
 
-### A. By Input Source
+| 输入方式 | 额外插件 | 说明 |
+| :--- | :---: | :--- |
+| **本地 PDF**（`path/to/paper.pdf`） | 不需要 | 默认入口，离线可用，直接渲染关键页并核验内容。 |
+| **arXiv ID / 链接**（`1706.03762` 等） | 不需要 | 内置 `scripts/fetch_paper.py` 自动拉取元数据并下载 PDF。 |
+| **开放获取 DOI**（`10.1038/...`） | 不需要 | 查 Crossref 书目信息，并依次从 OpenAlex、Europe PMC、Semantic Scholar、可选 Unpaywall 获取合法 OA PDF。 |
+| **付费墙 DOI**（`10.1109/...`） | 不需要 | 仅保存书目元数据并停下提示提供本地 PDF 或 Zotero 条目（退出码 `2`），不凭摘要硬编，也不调用灰色源。 |
+| **Zotero 7+ 本地文献库** | 不需要 | 兼容 Zotero 7 / 8 / 9 / 10，直连本地 API（`127.0.0.1:23119`），自动读取元数据、笔记并定位本地 PDF（含自定义数据目录）。若已装 `zotero-cli` / `zotero-mcp` 也可直接复用。 |
 
-**1. Local PDF (most reliable, works offline)**
+---
+
+## 使用示例
+
+### 在对话中调用
+
+**1. 本地 PDF（离散算法 / 编解码类论文）**
 ```text
-Use $paper-deep-reader to create an interactive HTML deep-reading page for: ./papers/pinho-2002.pdf
+使用 $paper-deep-reader 深度精读 ./papers/pinho-2002.pdf，给出完整的小规模手算闭环算例、交互式步进演示器、自定义输入沙盒与可筛选的原始实验数据表。
 ```
 
-**2. arXiv ID or URL (auto-downloads metadata & PDF)**
+**2. arXiv 或开放获取 DOI（深度学习 / 架构类论文）**
 ```text
-Use $paper-deep-reader on arXiv:1706.03762 ("Attention Is All You Need") and output a standalone HTML monograph.
-```
-
-**3. Open-Access DOI (auto-downloads OA PDF via OpenAlex / Semantic Scholar / Unpaywall)**
-```text
-Use $paper-deep-reader to analyze DOI 10.1038/s41586-021-03819-2.
-```
-
-**4. Zotero Library (via Zotero 7 local API or `zotero-cli`)**
-```text
-Use $paper-deep-reader to read the paper "Online Preprocessing for Sparse Histograms" from my Zotero library, and incorporate my existing Zotero notes into the final engineering insights section.
-```
-
-### B. By Paper Archetype
-
-**5. Discrete Algorithm / Compression / State-Machine Paper**
-```text
-Use $paper-deep-reader on ./papers/pinho-2002.pdf. Include a concrete numerical worked example, an interactive step-by-step algorithm player, a custom input sandbox, and a sortable benchmark table.
-```
-
-**6. Deep Learning / Model Architecture / Systems Paper**
-```text
-Use $paper-deep-reader on arXiv:2312.00752 (Mamba). Focus on the hierarchical architecture diagram with linked highlighting, tensor-shape trace, ablation small multiples, and throughput-vs-context scaling plots.
-```
-
-**7. Physics / Signal Processing / Experimental Measurement Paper**
-```text
-Use $paper-deep-reader on ./papers/interferometer-phase.pdf. Emphasize the physical measurement chain SVG, regime-validity boundaries, calibration assumptions, and error-budget breakdown.
-```
-
-### C. By Reading Goal & Output Language
-
-**8. Domain-Transfer & Engineering Boundary Analysis**
-```text
-Use $paper-deep-reader on ./papers/bitshuffle-2015.pdf. In the final section, evaluate how this method transfers to 16-bit high-rate scientific DAQ streams on FPGA/CPU, explicitly calling out failure modes and memory overhead.
-```
-
-**9. Output Language Selection (English / Simplified Chinese / Bilingual Terms)**
-```text
-Use $paper-deep-reader on arXiv:2405.04434 and write the full interactive HTML monograph in English.
+使用 $paper-deep-reader 精读 arXiv:2312.00752（Mamba），重点绘制带高亮联动的层级架构图、张量维度推演、消融对比小多图和序列长度扩展曲线。
 ```
 ```text
-使用 $paper-deep-reader 深度精读 ./papers/paper.pdf，正文使用中文学术风格，保留准确的英文专业术语，并将输出保存到 ./exports/paper-reading.html。
+使用 $paper-deep-reader 精读 DOI 10.1038/s41586-021-03819-2。
 ```
 
-### D. Standalone Utility Scripts (CLI)
+**3. 从 Zotero 读取文献并融合已有笔记**
+```text
+使用 $paper-deep-reader 读取我 Zotero 里的《Online Preprocessing for Sparse Histograms》，并把我已有的 Zotero 笔记结合进最后的工程启发部分。
+```
 
-You can also invoke the bundled scripts directly outside an agent session:
+**4. 结合自身研究方向分析工程迁移边界**
+```text
+使用 $paper-deep-reader 精读 ./papers/bitshuffle-2015.pdf，在最后结合我的研究方向（16-bit 高速科学采集数据流的实时无损压缩）分析可迁移点、内存开销与失效边界。
+```
+
+**5. 输出全英文精读页面**
+```text
+Use $paper-deep-reader on arXiv:1706.03762 and write the entire standalone interactive HTML monograph in English.
+```
+
+### 独立运行内置脚本（CLI）
 
 ```bash
-# 1. Fetch PDF & metadata from arXiv / OA DOI / Zotero 7 local API
+# 1. 拉取论文元数据与 PDF（arXiv / OA DOI / Zotero 7+）
 python scripts/fetch_paper.py --source 1706.03762 --out ./temp/demo
 python scripts/fetch_paper.py --source 10.1038/s41586-021-03819-2 --out ./temp/demo
 python scripts/fetch_paper.py --zotero-query "sparse histograms" --out ./temp/demo
 
-# 2. Extract text & render verification PNGs (200 DPI)
+# 2. 提取全文并渲染 200 DPI 核验页图
 python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo --pages 1-6 --dpi 200
 
-# 3. Run static QA on a generated HTML file (KaTeX, SVG IDs, JS syntax, anti-patterns)
+# 3. 对生成的 HTML 运行静态检查（KaTeX、重复 ID、JS 语法、禁用套话）
 python scripts/qa_static.py examples/pinho-2002-demo.html --strict-cliches
 
-# 4. Capture 1440px headless browser QA slices (Chrome / Chromium / Edge)
+# 4. 捕获 1440px 浏览器截图切片进行视觉审查
 python scripts/qa_browser_shots.py --html examples/pinho-2002-demo.html --out ./temp/demo/qa_shots
 ```
 
 ---
 
-## 4-Stage Workflow & Repository Layout
+## 工作流与目录结构
+
+整体按四步推进：**① 源文献落地与逐页视觉核对** → **② 学术长文撰写与算例/边界核查** → **③ 矢量图绘制、统计图自检与单文件组装** → **④ 静态与 1440px 浏览器双层质检**。
 
 ```text
 paper-deep-reader/
-├── SKILL.md                           # 4-stage workflow, input adapters & paper-type adaptation rules
+├── SKILL.md                           # 完整工作流、输入源适配与按论文类型选型规范
 ├── agents/
-│   └── openai.yaml                    # Explicit-invocation policy for Codex
+│   └── openai.yaml                    # Codex 显式调用配置
 ├── assets/
-│   ├── theme-morandi.css              # Warm Paper Morandi editorial stylesheet & lightbox CSS
-│   ├── widgets.js                     # rAF TOC spy, data-ref linking, 120fps vector pan/zoom lightbox
-│   └── morandi-academic.mplstyle      # Harmonized Matplotlib academic style
+│   ├── theme-morandi.css              # 暖纸莫兰迪排版样式表与灯箱样式
+│   ├── widgets.js                     # 目录联动、术语-SVG 高亮、中英自适应矢量灯箱
+│   └── morandi-academic.mplstyle      # 配色统一的 Matplotlib 学术样式
 ├── references/
-│   ├── academic-writing-guide.md      # Narrative order, worked examples & silent evidence-audit rules
-│   ├── diagram-and-layout-guide.md    # Vector diagram craft & adaptive interactive widgets
-│   └── plotting-guide.md              # Full-width vs dual-panel rules & visual QA checklist
+│   ├── academic-writing-guide.md      # 叙事结构、手算算例与证据边界规范
+│   ├── diagram-and-layout-guide.md    # 矢量机制图工艺与交互组件指南
+│   └── plotting-guide.md              # 全宽/双栏拆图规则与绘图视觉自检清单
 ├── scripts/
-│   ├── fetch_paper.py                 # Stdlib-only fetcher for arXiv, OA DOI, PDF URL & Zotero 7 local API
-│   ├── extract_pdf.py                 # PyMuPDF text extraction + verification page PNG renderer
-│   ├── assemble_html.py               # Single-file HTML bundler + SVG metadata stripper & ID prefixer
-│   ├── qa_static.py                   # Static QA (KaTeX, duplicate IDs, anti-patterns, node --check)
-│   └── qa_browser_shots.py            # Cross-platform headless Chrome/Edge visual QA slicer
-├── docs/images/                       # README visual showcase screenshots
+│   ├── fetch_paper.py                 # 零依赖拉取器（arXiv / OA DOI / PDF URL / Zotero 7+）
+│   ├── extract_pdf.py                 # PyMuPDF 文本提取与核验页 PNG 渲染
+│   ├── assemble_html.py               # 单文件 HTML 组装器（SVG 清理与 ID 隔离）
+│   ├── qa_static.py                   # 静态质检脚本（公式、ID、套话、node --check）
+│   └── qa_browser_shots.py            # 跨平台无头浏览器 1440px 截图切片脚本
+├── docs/images/                       # README 展示截图
 ├── examples/
-│   └── pinho-2002-demo.html           # Complete standalone HTML demo
+│   └── pinho-2002-demo.html           # 完整单文件 HTML 示例
 ├── requirements.txt
-├── README.md                          # English documentation
-├── README.zh-CN.md                    # Simplified Chinese documentation
+├── README.md                          # 简体中文文档（默认）
+├── README.en.md                       # English documentation
 └── LICENSE                            # MIT
 ```
 
-1. **Stage 1 · Source Grounding**: Fetch or load the PDF, render key pages to PNGs via PyMuPDF, visually inspect equations/tables/footnotes, and cross-check summary totals in Python.
-2. **Stage 2 · Monograph Synthesis & Silent Deep-Audit**: Draft clean academic prose with concrete worked examples, component role hierarchy, and evidence boundaries—without backstage QA badge noise.
-3. **Stage 3 · Adaptive Visuals & Assembly**: Craft precision inline SVGs, generate and visually inspect Matplotlib vector plots (`morandi-academic.mplstyle`), add paper-appropriate interactive widgets, and assemble one standalone HTML file.
-4. **Stage 4 · Dual-Layer QA**: Run `qa_static.py` + `qa_browser_shots.py`, inspect rendered 1440px screenshots, fix any clipping or spacing flaws, and deliver the standalone `.html`.
+---
+
+## 常见问题
+
+- **为什么某些 DOI 会返回 `PAYWALL_OR_NO_OA_PDF`？**  
+  IEEE、Elsevier、Springer 等订阅制期刊不通过公开接口提供全文 PDF。`fetch_paper.py` 只查询合法开放获取源，不会接入灰色镜像，也不允许模型仅靠摘要推测公式和实验数据；遇到此类论文直接传本地 PDF 或从 Zotero 读取即可。设置环境变量 `UNPAYWALL_EMAIL=you@example.com` 可额外启用 Unpaywall 检索机构库与作者预印本。
+- **如何开启 Zotero 7+ 本地 API？**  
+  打开 Zotero（7 / 8 / 9 / 10 通用）→ **设置 → 高级 → 常规** → 勾选「允许此计算机上的其他应用程序与 Zotero 通信」。脚本通过 `/file` 接口自动解析真实磁盘路径，即使你把 Zotero 数据目录迁到了 `D:\Zotero` 等自定义位置也无需额外传参。
+- **生成的 HTML 完全离线也能看吗？**  
+  样式、交互脚本、原始数据表与所有矢量图表均内联在单个 HTML 内，无外链字体或图床；仅数学公式排版按需加载 KaTeX CDN（离线时正文、表格与所有矢量图依然正常浏览）。
 
 ---
 
-## FAQ & Troubleshooting
+## 致谢与开源协议
 
-- **Why did a DOI return `PAYWALL_OR_NO_OA_PDF`?**  
-  Publisher DOIs (e.g., IEEE, Elsevier, Springer non-OA papers) do not expose legal open-access PDFs via Crossref/OpenAlex/Semantic Scholar. `fetch_paper.py` intentionally refuses unauthorized mirror sources, saves verified metadata, and asks you to pass a local PDF or Zotero item. Setting `UNPAYWALL_EMAIL=you@example.com` also enables Unpaywall lookups for repository/author-accepted manuscripts.
-- **How do I enable Zotero 7 Local API (zero-plugin Zotero reading)?**  
-  Open Zotero 7 → **Settings → Advanced → General** → check *"Allow other applications on this computer to communicate with Zotero"*. If your Zotero data folder is not in `~/Zotero`, pass `--zotero-dir /path/to/Zotero`.
-- **Does the output HTML require an internet connection?**  
-  All CSS, JavaScript, data, and vector SVG diagrams are embedded directly inside the single `.html` file. Only the KaTeX CDN script is loaded externally for LaTeX formula typesetting (with graceful fallback); zero Google Fonts or external image hosts are used.
-- **Why does `qa_browser_shots.py` say `QA_BROWSER_SKIPPED`?**  
-  Visual screenshot slicing requires Chrome, Chromium, or Microsoft Edge installed locally. If none is detected, static QA (`qa_static.py`) still runs completely offline.
-
----
-
-## Credits & License
-
-All templates, stylesheets, scripts, and guides in this repository are written from scratch under the [MIT License](LICENSE). The workflow design draws inspiration from several open-source ideas in the AI research and agent-skills ecosystem:
-- Vector mechanism diagrams, linked highlighting, steppers, and small multiples inspired by [`visual-explainer`](https://github.com/nicobailon/visual-explainer) (MIT).
-- Deep close-reading rigor (worked micro-examples, component load-bearing hierarchy, and evidence-boundary audits) inspired by academic paper X-ray reading workflows.
-- Publication-grade Matplotlib render-inspect-revise loops inspired by academic plotting workflows.
-- Optional Zotero local library workflow compatible with Zotero 7 Local API and [`zotero-mcp`](https://github.com/54yyyu/zotero-mcp) (MIT).
+本仓库全部模板、样式表、脚本与规范文档均基于 [MIT License](LICENSE) 从零编写，设计思路借鉴了开源社区的若干优秀实践：
+- 矢量机制图、高亮联动、步进播放器与小多图矩阵的交互理念受 [`visual-explainer`](https://github.com/nicobailon/visual-explainer)（MIT）启发；
+- 数值微算例、组件作用评估与证据边界审查受学术论文深度 X-ray 精读工作流启发；
+- 统计图“渲染—目视自检—修正”闭环受学术绘图工作流启发；
+- 本地文献库联动兼容 Zotero 7+ Local API 与 [`zotero-mcp`](https://github.com/54yyyu/zotero-mcp)（MIT）。

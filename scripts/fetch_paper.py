@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Zero-dependency paper fetcher for arXiv, Open-Access DOI, direct PDF URLs, and Zotero 7 local API.
+"""Zero-dependency paper fetcher for arXiv, Open-Access DOI, direct PDF URLs, and Zotero 7+ local API.
 
 Uses only the Python standard library so external users need zero extra packages or MCP servers
-to fetch arXiv preprints, legal Open-Access DOI PDFs, or local Zotero 7 attachments.
+to fetch arXiv preprints, legal Open-Access DOI PDFs, or local Zotero 7+ attachments.
 Paywalled DOIs without a legal Open-Access PDF never fall back to unauthorized sources;
 they save verified bibliographic metadata and exit with code 2 so the caller can supply a local PDF.
 
@@ -20,7 +20,6 @@ import argparse
 import json
 import os
 import re
-import shutil
 import sys
 import urllib.error
 import urllib.parse
@@ -384,7 +383,57 @@ def handle_direct_url(url: str, out_dir: Path) -> int:
     return 1
 
 
-def resolve_zotero_attachment_pdf(att_data: dict[str, Any], att_key: str, zotero_dir: Path) -> Path | None:
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def file_uri_to_path(uri: str) -> Path | None:
+    parsed = urllib.parse.urlparse(uri)
+    if parsed.scheme.lower() != "file":
+        return None
+    raw_path = urllib.parse.unquote(parsed.path or "")
+    # Windows file:///D:/path -> D:/path
+    if re.match(r"^/[A-Za-z]:/", raw_path):
+        raw_path = raw_path[1:]
+    # UNC path file://server/share/path
+    if parsed.netloc and parsed.netloc.lower() != "localhost":
+        raw_path = f"//{parsed.netloc}{raw_path}"
+    p = Path(raw_path)
+    return p if p.exists() and p.is_file() else None
+
+
+def resolve_zotero_file_api(base: str, att_key: str, out_dir: Path) -> Path | None:
+    """Resolve local PDF path via Zotero 7+ /items/<key>/file endpoint (works for custom data dirs)."""
+    if not att_key:
+        return None
+    url = f"{base}/items/{urllib.parse.quote(att_key)}/file"
+    opener = urllib.request.build_opener(_NoRedirectHandler)
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    try:
+        with opener.open(req, timeout=10) as resp:
+            data = resp.read()
+            if is_valid_pdf_bytes(data):
+                dest = out_dir / f"zotero_{slugify(att_key)}.pdf"
+                dest.write_bytes(data)
+                return dest
+    except urllib.error.HTTPError as e:
+        if e.code in (301, 302, 303, 307, 308):
+            loc = e.headers.get("Location") or ""
+            p = file_uri_to_path(loc)
+            if p is not None:
+                return p
+    except Exception:
+        return None
+    return None
+
+
+def resolve_zotero_attachment_pdf(
+    base: str, att_data: dict[str, Any], att_key: str, zotero_dir: Path, out_dir: Path
+) -> Path | None:
+    via_api = resolve_zotero_file_api(base, att_key, out_dir)
+    if via_api is not None:
+        return via_api
     link_mode = att_data.get("linkMode", "")
     raw_path = att_data.get("path", "") or ""
     if link_mode == "linked_file" and raw_path:
@@ -428,7 +477,7 @@ def handle_zotero_local(
     if item is None:
         print(
             "ZOTERO_LOCAL_UNREACHABLE_OR_NOT_FOUND | "
-            "Make sure Zotero 7 is running and 'Allow other applications on this computer "
+            "Make sure Zotero 7+ is running and 'Allow other applications on this computer "
             "to communicate with Zotero' is enabled in Settings -> Advanced, or pass a local PDF."
         )
         return 3
@@ -443,7 +492,7 @@ def handle_zotero_local(
         for ch in children:
             cd = ch.get("data") or {}
             if cd.get("itemType") == "attachment" and cd.get("contentType") == "application/pdf":
-                cand = resolve_zotero_attachment_pdf(cd, ch.get("key", ""), zotero_dir)
+                cand = resolve_zotero_attachment_pdf(base, cd, ch.get("key", ""), zotero_dir, out_dir)
                 if cand is not None and pdf_src is None:
                     pdf_src = cand
             elif cd.get("itemType") == "note" and cd.get("note"):
@@ -484,15 +533,15 @@ def handle_zotero_local(
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description="Fetch paper metadata & PDF from arXiv, Open-Access DOI, direct PDF URL, or Zotero 7 local API."
+        description="Fetch paper metadata & PDF from arXiv, Open-Access DOI, direct PDF URL, or Zotero 7+ local API."
     )
     ap.add_argument("--source", help="Local PDF path, arXiv ID/URL, DOI, or direct PDF URL.")
-    ap.add_argument("--zotero-key", help="Zotero item key (requires running Zotero 7 local API).")
-    ap.add_argument("--zotero-query", help="Search query against Zotero 7 local API.")
+    ap.add_argument("--zotero-key", help="Zotero item key (requires running Zotero 7+ local API).")
+    ap.add_argument("--zotero-query", help="Search query against Zotero 7+ local API.")
     ap.add_argument(
         "--zotero-dir",
         default=str(Path.home() / "Zotero"),
-        help="Local Zotero data directory containing storage/ (default: ~/Zotero).",
+        help="Optional fallback Zotero data directory if /file API lookup fails (default: ~/Zotero).",
     )
     ap.add_argument(
         "--email",

@@ -10,7 +10,7 @@ description: >-
   for quick paper questions, brief summaries, or ordinary chat discussions.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Paper Deep Reader (`paper-deep-reader`)
@@ -24,7 +24,7 @@ Resolve the source paper using the lightest available input path:
 2. **Built-in zero-dependency fetcher (`scripts/fetch_paper.py`, Python stdlib only)**:
    - **arXiv ID / URL**: `python scripts/fetch_paper.py --source 1706.03762 --out <workdir>` — fetches arXiv metadata and downloads the PDF automatically.
    - **DOI (Open Access)**: `python scripts/fetch_paper.py --source 10.xxxx/... --out <workdir>` — retrieves authoritative Crossref metadata and searches legal Open-Access PDFs (OpenAlex, Europe PMC, Semantic Scholar, optional Unpaywall via `--email`/`UNPAYWALL_EMAIL`, Crossref links). If the paper is paywalled with no legal OA PDF, the script saves `paper_meta.json` and exits with code `2` (`PAYWALL_OR_NO_OA_PDF`): **stop and ask the user for a local PDF or Zotero item**—never fabricate formulas/tables from an abstract alone and never use unauthorized download sources.
-   - **Zotero 7 Local API (zero-plugin)**: `python scripts/fetch_paper.py --zotero-query "<title>" --out <workdir>` (or `--zotero-key <KEY>`) queries `127.0.0.1:23119` and resolves the local PDF attachment + notes.
+   - **Zotero 7+ Local API (zero-plugin)**: `python scripts/fetch_paper.py --zotero-query "<title>" --out <workdir>` (or `--zotero-key <KEY>`) queries `127.0.0.1:23119` (compatible with Zotero 7 / 8 / 9 / 10) and automatically resolves the local PDF path via `/file` (even for custom data directories) alongside metadata and notes.
 3. **Optional `zotero-cli` / `zotero-mcp` / paper-search MCP**: If already installed in the host environment, you may use them directly to retrieve metadata, notes, and local PDF paths.
 
 Always put intermediate files (extracted text, PDF page PNGs, plotting scripts, QA screenshots) in a dedicated temporary task directory (respecting any workspace temp-directory rule such as `temp/<task>/`); never litter the repository root.

@@ -11,6 +11,7 @@ Usage:
     --extra-js workdir/custom_widgets.js
 """
 import argparse
+import html
 import re
 from pathlib import Path
 
@@ -34,12 +35,11 @@ def clean_and_prefix_svg(svg_text: str, prefix: str) -> str:
         svg_text = svg_text.replace(f'href="#{old_id}"', f'href="#{new_id}"')
         svg_text = svg_text.replace(f'xlink:href="#{old_id}"', f'xlink:href="#{new_id}"')
 
-    svg_text = re.sub(
-        r'<svg([^>]*?)\s+width="[^"]+"\s+height="[^"]+"',
-        r'<svg\1 width="100%"',
-        svg_text,
-        count=1,
-    )
+    def _normalize_svg_open(m: re.Match) -> str:
+        attrs = re.sub(r'\s+(?:width|height)="[^"]*"', "", m.group(1))
+        return f'<svg{attrs} width="100%">'
+
+    svg_text = re.sub(r"<svg([^>]*)>", _normalize_svg_open, svg_text, count=1)
     return svg_text.strip()
 
 
@@ -83,7 +83,7 @@ def main() -> None:
         f"<head>\n"
         f'  <meta charset="UTF-8" />\n'
         f'  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n'
-        f"  <title>{args.title}</title>\n"
+        f"  <title>{html.escape(args.title)}</title>\n"
         f"{katex_head}\n"
         f"  <style>\n{theme_css}\n{extra_css}\n  </style>\n"
         f"</head>\n"

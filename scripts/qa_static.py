@@ -71,8 +71,13 @@ def main() -> None:
     if dups:
         errors.append(f"Duplicate DOM/SVG IDs ({len(dups)}): {list(dups.items())[:8]}")
 
-    # 5. KaTeX math checks (strip script/style/svg first)
-    prose = re.sub(r"<script\b.*?</script>|<style\b.*?</style>|<svg\b.*?</svg>", "", text, flags=re.S)
+    # 5. KaTeX math checks (strip script/style/svg/pre/code first)
+    prose = re.sub(
+        r"<script\b.*?</script>|<style\b.*?</style>|<svg\b.*?</svg>|<pre\b.*?</pre>|<code\b.*?</code>",
+        "",
+        text,
+        flags=re.S,
+    )
     disp = re.findall(r"\$\$(.+?)\$\$", prose, flags=re.S)
     prose_no_disp = re.sub(r"\$\$.+?\$\$", "", prose, flags=re.S)
     inl = re.findall(r"\$([^$\n]+?)\$", prose_no_disp)

@@ -1,4 +1,4 @@
-/* paper-deep-reader: Zero-Dependency Interactive Widgets (v0.1)
+/* paper-deep-reader: Zero-Dependency Interactive Widgets (v1.0)
  * 1. rAF-throttled GPU scroll progress bar + left TOC scroll-spy
  * 2. Prose-to-SVG linked highlighting (data-ref <-> data-ref-node)
  * 3. Two-stage 120fps GPU + debounced crisp vector Pan & Zoom Lightbox
@@ -76,21 +76,44 @@
 
   // 3. Fullscreen Two-Stage Vector Pan & Zoom Lightbox
   (function initLightbox() {
+    const isZh = /^zh\b/i.test((document.documentElement.getAttribute('lang') || 'zh-CN').trim());
+    const ui = isZh
+      ? {
+          title: '图表放大查看',
+          hint: '滚轮缩放 · 拖拽平移 · 双击还原',
+          zoomOut: '缩小',
+          zoomIn: '放大',
+          fit: '复位',
+          fitAria: '复位适应窗口',
+          close: '✕ 关闭',
+          closeAria: '关闭放大视图',
+        }
+      : {
+          title: 'Inspect Figure',
+          hint: 'Wheel to zoom · Drag to pan · Double-click to reset',
+          zoomOut: 'Zoom out',
+          zoomIn: 'Zoom in',
+          fit: 'Reset',
+          fitAria: 'Fit to window',
+          close: '✕ Close',
+          closeAria: 'Close fullscreen viewer',
+        };
+
     let overlay = document.getElementById('fig-lightbox');
     if (!overlay) {
       const tpl = document.createElement('div');
       tpl.innerHTML =
-        '<div class="lightbox-overlay" id="fig-lightbox" role="dialog" aria-modal="true" aria-label="图表放大查看">' +
+        '<div class="lightbox-overlay" id="fig-lightbox" role="dialog" aria-modal="true" aria-label="' + ui.title + '">' +
           '<div class="lightbox-dialog">' +
             '<div class="lightbox-bar">' +
-              '<span class="lightbox-title" id="lb-title">图表放大查看</span>' +
+              '<span class="lightbox-title" id="lb-title">' + ui.title + '</span>' +
               '<div class="lightbox-controls">' +
-                '<span class="lightbox-hint">滚轮缩放 · 拖拽平移 · 双击还原</span>' +
-                '<button class="btn" type="button" id="lb-out" aria-label="缩小">−</button>' +
+                '<span class="lightbox-hint">' + ui.hint + '</span>' +
+                '<button class="btn" type="button" id="lb-out" aria-label="' + ui.zoomOut + '">−</button>' +
                 '<span class="lightbox-zoom-val" id="lb-zoom-val">100%</span>' +
-                '<button class="btn" type="button" id="lb-in" aria-label="放大">＋</button>' +
-                '<button class="btn" type="button" id="lb-fit" aria-label="复位适应窗口">复位</button>' +
-                '<button class="btn btn-primary" type="button" id="lb-close" aria-label="关闭放大视图">✕ 关闭</button>' +
+                '<button class="btn" type="button" id="lb-in" aria-label="' + ui.zoomIn + '">＋</button>' +
+                '<button class="btn" type="button" id="lb-fit" aria-label="' + ui.fitAria + '">' + ui.fit + '</button>' +
+                '<button class="btn btn-primary" type="button" id="lb-close" aria-label="' + ui.closeAria + '">' + ui.close + '</button>' +
               '</div>' +
             '</div>' +
             '<div class="lightbox-stage" id="lb-stage">' +
@@ -221,7 +244,7 @@
       canvasEl.appendChild(clone);
 
       const t = frame.getAttribute('data-lightbox-title')
-        || (frame.querySelector('.fig-title') ? frame.querySelector('.fig-title').textContent.trim() : '图表放大查看');
+        || (frame.querySelector('.fig-title') ? frame.querySelector('.fig-title').textContent.trim() : ui.title);
       titleEl.textContent = t;
       overlay.classList.add('is-open');
       document.body.style.overflow = 'hidden';
