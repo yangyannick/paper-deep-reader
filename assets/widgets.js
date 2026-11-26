@@ -16,14 +16,15 @@
 
   const ui = isZh
     ? {
-        tabToc: '目录',
-        tabFigs: '图表',
-        tabEqs: '公式',
+        outlineCap: '文章大纲',
+        foldFigs: '本篇图表',
+        foldEqs: '核心公式',
+        secProgress: (i, n) => '第 ' + i + ' / ' + n + ' 节',
         readMin: (m) => '约 ' + m + ' 分钟',
         fontDec: '减小字号',
         fontInc: '增大字号',
-        themeDark: '切换深色护眼模式',
-        themeLight: '切换暖纸浅色模式',
+        themeDark: '切换深夜蓝灰模式',
+        themeLight: '切换白天暖纸模式',
         prev: '‹ 上一步',
         next: '下一步 ›',
         play: '▶ 逐步推演',
@@ -66,14 +67,15 @@
         lbCloseAria: '关闭放大视图',
       }
     : {
-        tabToc: 'Outline',
-        tabFigs: 'Figures',
-        tabEqs: 'Eqs',
+        outlineCap: 'Contents',
+        foldFigs: 'Figures',
+        foldEqs: 'Equations',
+        secProgress: (i, n) => 'Sec ' + i + ' / ' + n,
         readMin: (m) => '~' + m + ' min',
         fontDec: 'Decrease font size',
         fontInc: 'Increase font size',
-        themeDark: 'Switch to Warm Dark theme',
-        themeLight: 'Switch to Warm Paper light theme',
+        themeDark: 'Switch to Dimmed Slate dark mode',
+        themeLight: 'Switch to Warm Paper light mode',
         prev: '‹ Prev',
         next: 'Next ›',
         play: '▶ Replay',
@@ -294,7 +296,7 @@
     });
   })();
 
-  // 2. Navigation Progress & 3-in-1 Left Sidebar (TOC / Figures / Equations)
+  // 2. Navigation Progress & Option B Frameless Outline + Quiet Collapsible Figure/Eq Drawers
   (function initNavigationAndSidebar() {
     const bar = document.getElementById('scroll-progress');
     const tocList = document.getElementById('toc-list');
@@ -305,105 +307,68 @@
     }).filter(Boolean);
 
     let footerPos = null;
+    let miniFill = null;
     const tocCard = tocList ? tocList.closest('.toc-card') : null;
     if (tocCard && tocList) {
+      const heading = tocCard.querySelector('.toc-heading');
+      if (heading && !heading.textContent.trim()) heading.textContent = ui.outlineCap;
+
       const figs = Array.from(document.querySelectorAll('.article-main figure.fig-frame'));
       const eqs = Array.from(document.querySelectorAll('.article-main .eq-box'));
       figs.forEach((f, i) => { if (!f.id) f.id = 'pdr-fig-' + (i + 1); });
       eqs.forEach((e, i) => { if (!e.id) e.id = 'pdr-eq-' + (i + 1); });
 
       if (figs.length || eqs.length) {
-        const heading = tocCard.querySelector('.toc-heading');
-        const tabs = document.createElement('div');
-        tabs.className = 'toc-tabs';
-        tabs.setAttribute('role', 'tablist');
+        const foldGroup = document.createElement('div');
+        foldGroup.className = 'toc-fold-group';
 
-        function mkTab(label, count, active) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'toc-tab' + (active ? ' is-active' : '');
-          b.setAttribute('role', 'tab');
-          b.setAttribute('aria-selected', active ? 'true' : 'false');
-          b.innerHTML = label + (count != null ? '<span class="toc-tab-cnt">' + count + '</span>' : '');
-          return b;
+        function buildFold(title, items) {
+          const det = document.createElement('details');
+          det.className = 'toc-fold';
+          const sum = document.createElement('summary');
+          const lblSpan = document.createElement('span');
+          lblSpan.textContent = title;
+          const cntSpan = document.createElement('span');
+          cntSpan.className = 'toc-fold-cnt';
+          cntSpan.textContent = String(items.length);
+          sum.append(lblSpan, cntSpan);
+
+          const ul = document.createElement('ul');
+          items.forEach(({ el, text }) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = '#' + el.id;
+            a.textContent = text;
+            a.title = text;
+            a.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              jumpToElement(el, true);
+            });
+            li.appendChild(a);
+            ul.appendChild(li);
+          });
+          det.append(sum, ul);
+          return det;
         }
 
-        const tabToc = mkTab(ui.tabToc, null, true);
-        tabs.appendChild(tabToc);
-
-        let figList = null;
-        let tabFigs = null;
         if (figs.length) {
-          tabFigs = mkTab(ui.tabFigs, figs.length, false);
-          tabs.appendChild(tabFigs);
-          figList = document.createElement('ul');
-          figList.className = 'toc-idx-list';
-          figList.hidden = true;
-          figs.forEach((f, i) => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = '#' + f.id;
+          const figItems = figs.map((f, i) => {
             const titleEl = f.querySelector('.fig-title');
-            const txt = titleEl ? titleEl.textContent.trim() : ('Fig. ' + (i + 1));
-            a.textContent = txt;
-            a.title = txt;
-            a.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              jumpToElement(f, true);
-            });
-            li.appendChild(a);
-            figList.appendChild(li);
+            return { el: f, text: titleEl ? titleEl.textContent.replace(/\s+/g, ' ').trim() : ('Fig. ' + (i + 1)) };
           });
-          tocList.insertAdjacentElement('afterend', figList);
+          foldGroup.appendChild(buildFold(ui.foldFigs, figItems));
         }
-
-        let eqList = null;
-        let tabEqs = null;
         if (eqs.length) {
-          tabEqs = mkTab(ui.tabEqs, eqs.length, false);
-          tabs.appendChild(tabEqs);
-          eqList = document.createElement('ul');
-          eqList.className = 'toc-idx-list';
-          eqList.hidden = true;
-          eqs.forEach((eq, i) => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = '#' + eq.id;
-            const lbl = eq.querySelector('.eq-label');
-            const txt = lbl ? lbl.textContent.replace(/\s+/g, ' ').trim() : ('Eq. ' + (i + 1));
-            a.textContent = txt;
-            a.title = txt;
-            a.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              jumpToElement(eq, true);
-            });
-            li.appendChild(a);
-            eqList.appendChild(li);
+          const eqItems = eqs.map((eq, i) => {
+            const lbl = eq.querySelector('.eq-label > span:first-child') || eq.querySelector('.eq-label');
+            return { el: eq, text: lbl ? lbl.textContent.replace(/\s+/g, ' ').trim() : ('Eq. ' + (i + 1)) };
           });
-          (figList || tocList).insertAdjacentElement('afterend', eqList);
+          foldGroup.appendChild(buildFold(ui.foldEqs, eqItems));
         }
-
-        function activateTab(which) {
-          [
-            [tabToc, tocList, which === 'toc'],
-            [tabFigs, figList, which === 'figs'],
-            [tabEqs, eqList, which === 'eqs'],
-          ].forEach(([btn, list, on]) => {
-            if (!btn || !list) return;
-            btn.classList.toggle('is-active', on);
-            btn.setAttribute('aria-selected', on ? 'true' : 'false');
-            list.hidden = !on;
-          });
-        }
-        tabToc.addEventListener('click', () => activateTab('toc'));
-        if (tabFigs) tabFigs.addEventListener('click', () => activateTab('figs'));
-        if (tabEqs) tabEqs.addEventListener('click', () => activateTab('eqs'));
-
-        if (heading) heading.replaceWith(tabs);
-        else tocCard.prepend(tabs);
+        tocList.insertAdjacentElement('afterend', foldGroup);
       }
 
-      // Reading progress & estimated time footer
+      // Reading progress bar & estimated reading time footer
       const mainEl = document.querySelector('.article-main');
       const rawTxt = mainEl ? mainEl.textContent || '' : '';
       const cjk = (rawTxt.match(/[\u4e00-\u9fff]/g) || []).length;
@@ -411,11 +376,20 @@
       const mins = Math.max(2, Math.round(cjk / 420 + latin / 220));
       const foot = document.createElement('div');
       foot.className = 'toc-footer';
+      const metaRow = document.createElement('div');
+      metaRow.className = 'toc-meta-row';
       footerPos = document.createElement('span');
-      footerPos.textContent = tocLinks.length ? ('1 / ' + tocLinks.length) : '';
+      footerPos.textContent = tocLinks.length ? ui.secProgress(1, tocLinks.length) : '';
       const est = document.createElement('span');
       est.textContent = ui.readMin(mins);
-      foot.append(footerPos, est);
+      metaRow.append(footerPos, est);
+      const miniBar = document.createElement('div');
+      miniBar.className = 'toc-mini-bar';
+      miniFill = document.createElement('div');
+      miniFill.className = 'toc-mini-fill';
+      miniFill.style.width = tocLinks.length ? (100 / tocLinks.length).toFixed(1) + '%' : '0%';
+      miniBar.appendChild(miniFill);
+      foot.append(metaRow, miniBar);
       tocCard.appendChild(foot);
     }
 
@@ -441,7 +415,8 @@
         if (tocLinks[activeIdx]) tocLinks[activeIdx].classList.remove('active');
         if (tocLinks[nextIdx]) tocLinks[nextIdx].classList.add('active');
         activeIdx = nextIdx;
-        if (footerPos) footerPos.textContent = (activeIdx + 1) + ' / ' + tocLinks.length;
+        if (footerPos) footerPos.textContent = ui.secProgress(activeIdx + 1, tocLinks.length);
+        if (miniFill) miniFill.style.width = (((activeIdx + 1) / tocLinks.length) * 100).toFixed(1) + '%';
       }
     }
 
@@ -505,7 +480,7 @@
     });
   })();
 
-  // 4. Auto-Indexed Symbol Hover Quick-Card (data-sym)
+  // 4. Auto-Indexed Symbol Hover Quick-Card (data-sym, live KaTeX DOM cloning)
   (function initSymbolCards() {
     const refs = Array.from(document.querySelectorAll('[data-sym]'));
     if (!refs.length) return;
@@ -518,17 +493,7 @@
       const cells = Array.from(tr.querySelectorAll('td'));
       if (cells.length < 2) return;
       const symText = cleanKey(cells[0].textContent);
-      const domain = cells.length >= 3 ? cells[1].textContent.replace(/\s+/g, ' ').trim() : '';
-      const meaning = cells.slice(cells.length >= 3 ? 2 : 1)
-        .map(c => c.textContent.replace(/\s+/g, ' ').trim())
-        .filter(Boolean)
-        .join(' — ');
-      const entry = {
-        label: cells[0].textContent.trim() || symText,
-        domain: domain,
-        meaning: meaning,
-        rowEl: tr,
-      };
+      const entry = { rowEl: tr, cells: cells };
       const keys = (explicitKeys || symText).split(',').map(cleanKey).filter(Boolean);
       keys.forEach(k => { if (!symMap.has(k)) symMap.set(k, entry); });
     }
@@ -555,8 +520,8 @@
     function openPop(el) {
       const rawKey = cleanKey(el.getAttribute('data-sym'));
       const tip = (el.getAttribute('data-sym-tip') || '').trim();
-      const entry = symMap.get(rawKey) || (tip ? { label: rawKey, domain: el.getAttribute('data-sym-domain') || '', meaning: tip, rowEl: null } : null);
-      if (!entry) return;
+      const entry = symMap.get(rawKey) || null;
+      if (!entry && !tip) return;
 
       closePop();
       activeRef = el;
@@ -570,22 +535,40 @@
       head.className = 'pdr-sym-head';
       const keyEl = document.createElement('span');
       keyEl.className = 'pdr-sym-key';
-      keyEl.textContent = entry.label;
+      if (entry && entry.cells[0]) {
+        Array.from(entry.cells[0].childNodes).forEach(n => keyEl.appendChild(n.cloneNode(true)));
+      } else {
+        Array.from(el.childNodes).forEach(n => keyEl.appendChild(n.cloneNode(true)));
+      }
       head.appendChild(keyEl);
-      if (entry.domain) {
+
+      if (entry && entry.cells.length >= 3) {
         const domEl = document.createElement('span');
         domEl.className = 'pdr-sym-domain';
-        domEl.textContent = entry.domain;
+        Array.from(entry.cells[1].childNodes).forEach(n => domEl.appendChild(n.cloneNode(true)));
+        head.appendChild(domEl);
+      } else if (!entry && el.getAttribute('data-sym-domain')) {
+        const domEl = document.createElement('span');
+        domEl.className = 'pdr-sym-domain';
+        domEl.textContent = el.getAttribute('data-sym-domain');
         head.appendChild(domEl);
       }
       pop.appendChild(head);
 
       const body = document.createElement('p');
       body.className = 'pdr-sym-body';
-      body.textContent = entry.meaning;
+      if (entry) {
+        const mCells = entry.cells.slice(entry.cells.length >= 3 ? 2 : 1);
+        mCells.forEach((c, idx) => {
+          if (idx > 0) body.appendChild(document.createTextNode(' — '));
+          Array.from(c.childNodes).forEach(n => body.appendChild(n.cloneNode(true)));
+        });
+      } else {
+        body.textContent = tip;
+      }
       pop.appendChild(body);
 
-      if (entry.rowEl) {
+      if (entry && entry.rowEl) {
         const foot = document.createElement('div');
         foot.className = 'pdr-sym-foot';
         const btn = document.createElement('button');
@@ -599,6 +582,18 @@
         });
         foot.appendChild(btn);
         pop.appendChild(foot);
+      }
+
+      // Guarantee KaTeX rendering even for inline data-sym-tip or early hover before initial auto-render
+      if (typeof window.renderMathInElement === 'function' && pop.textContent.indexOf('$') !== -1) {
+        window.renderMathInElement(pop, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+          ],
+          ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'svg'],
+          throwOnError: false,
+        });
       }
 
       pop.addEventListener('mouseenter', () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = 0; } });

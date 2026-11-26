@@ -2,20 +2,20 @@
 
 All visuals must harmonize with `assets/theme-morandi.css` and `assets/widgets.js`. Almost all interactive capabilities below are **declarative (zero bespoke JS)**—add semantic HTML/SVG attributes and `assets/widgets.js` wires them automatically in both Simplified Chinese and English (`<html lang>`).
 
-## 1. Warm Paper Morandi Palette Contract (Light & Warm Dark)
+## 1. Warm Paper Morandi & Restrained Midnight Slate Palette Contract
 
-Use CSS variables inside hand-drawn diagrams (`class="diag-svg"`) so flowcharts automatically adapt to Warm Paper Light and Warm Charcoal Dark modes:
+Use CSS variables inside hand-drawn diagrams (`class="diag-svg"`) so flowcharts automatically adapt to Warm Paper Light and restrained Midnight Slate Dark modes (in dark mode, `.diag-svg` cards drop colorful tints to neutral slate surfaces with low-chroma strokes so dark screens never feel rainbow-noisy):
 
 | Role | Light Hex | Dark Hex | CSS Var / `.diag-svg` Class |
 |---|---|---|---|
-| Warm Paper Ground | `#F7F5F0` | `#171614` | `var(--paper)` |
-| Card / Node Surface | `#FBF9F5` | `#26231F` | `.d-card` (`--surface-tint` / `--border-strong`) |
-| Primary Ink / Text | `#1C1917` | `#EDE8DF` | `var(--ink)` (default on `.diag-svg text`) |
-| Muted Ink / Sublabels | `#6B655E` | `#A1998D` | `.d-muted` / `.d-edge` |
-| Scholarly Teal (Proposed / Active) | `#265867` (`#EEF5F7`) | `#5FA6B8` (`#1B2C32`) | `.d-teal` / `.d-edge-hot` |
-| Muted Sage (Lossless / Gain) | `#2A7A68` (`#EFF8F5`) | `#5BB39E` (`#1A2E29`) | `.d-sage` |
-| Muted Terracotta (Risk / Trade-off) | `#C85A3F` (`#FDF3F0`) | `#E07E64` (`#33201C`) | `.d-terra` |
-| Warm Ochre (Caution / Symbol / Condition) | `#A66E38` (`#FDF7EE`) | `#D6A15E` (`#302518`) | `.d-ochre` |
+| Page Ground | `#F7F5F0` | `#1B2028` | `var(--paper)` |
+| Card / Node Surface | `#FBF9F5` | `#272F3B` | `.d-card` (`--surface-tint` / `--border-strong`) |
+| Primary Ink / Text | `#1C1917` | `#ECF1F7` | `var(--ink)` (default on `.diag-svg text`) |
+| Muted Ink / Sublabels | `#6B655E` | `#8E9DB0` | `.d-muted` / `.d-edge` |
+| Scholarly Teal (Proposed / Active) | `#265867` (`#EEF5F7`) | `#7AB3C4` | `.d-teal` / `.d-edge-hot` |
+| Muted Sage (Lossless / Gain) | `#2A7A68` (`#EFF8F5`) | `#7FB5A5` | `.d-sage` |
+| Muted Terracotta (Risk / Trade-off) | `#C85A3F` (`#FDF3F0`) | `#C98B7D` | `.d-terra` |
+| Warm Ochre (Caution / Symbol / Condition) | `#A66E38` (`#FDF7EE`) | `#C5A77B` | `.d-ochre` |
 
 *(Matplotlib quantitative SVGs and original PDF raster crops stay on light academic paper in light mode and automatically receive a softened, low-glare paper plate in dark mode via `theme-morandi.css`—do not invert statistical charts.)*
 
@@ -141,8 +141,8 @@ Use **only** when the paper provides an explicit analytical equation or measured
 
 ### 3.7 Built-In Automatic Features (Zero Markup Needed)
 `assets/widgets.js` enables these automatically on every assembled monograph:
-- **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ Warm Charcoal Dark toggle (persisted via `localStorage`).
-- **3-in-1 Left Sidebar**: Auto-switches between `目录` (outline), `图表` (all `.fig-frame`), and `公式` (all `.eq-box`, hidden if 0 equations), plus reading progress and estimated reading time.
+- **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ restrained Midnight Slate Dark toggle (persisted via `localStorage`).
+- **Frameless Editorial Left Sidebar**: Clean borderless section outline rail with quiet collapsible `本篇图表` / `核心公式` drawers below (hidden when 0 equations), plus mini progress bar and estimated reading time.
 - **Zero-Clutter Notes & Questions**: Selecting text in `.article-main` pops a tiny `✎ 批注 | ? 提问` pill; each `.fig-frame` gets a subtle `✎` note icon. Saved per-paper in `localStorage`; Masthead reveals `✎ 笔记 N` only when ≥1 note exists, with one-click Markdown copy / `.md` download.
 - **120fps Vector Pan & Zoom Lightbox**: Works on every `.fig-frame` SVG or `<img>` (including cropped original figures and view-switched panels).
 
