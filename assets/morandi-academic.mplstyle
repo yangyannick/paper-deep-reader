@@ -1,0 +1,41 @@
+# paper-deep-reader: Original Warm Paper Morandi Matplotlib Style
+# Note: Matplotlib mplstyle treats unquoted '#' as comments, so hex colors are quoted.
+
+figure.facecolor: "white"
+axes.facecolor: "white"
+savefig.facecolor: "white"
+savefig.edgecolor: "white"
+savefig.dpi: 220
+
+axes.edgecolor: "#D2CBC0"
+axes.linewidth: 0.9
+axes.labelcolor: "#292524"
+axes.titlesize: 11.2
+axes.titleweight: bold
+axes.labelsize: 10.0
+axes.spines.top: False
+axes.spines.right: False
+axes.axisbelow: True
+
+text.color: "#1C1917"
+xtick.color: "#4A453F"
+ytick.color: "#4A453F"
+xtick.labelsize: 9.2
+ytick.labelsize: 9.2
+
+grid.color: "#ECE8E0"
+grid.linewidth: 0.75
+grid.linestyle: "-"
+
+legend.frameon: True
+legend.facecolor: "#FBF9F5"
+legend.edgecolor: "#D2CBC0"
+legend.fontsize: 9.0
+
+font.family: sans-serif
+font.sans-serif: Microsoft YaHei, PingFang SC, Noto Sans CJK SC, SimHei, DejaVu Sans
+axes.unicode_minus: False
+
+svg.fonttype: none
+pdf.fonttype: 42
+ps.fonttype: 42
