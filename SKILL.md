@@ -10,7 +10,7 @@ description: >-
   for quick paper questions, brief summaries, or ordinary chat discussions.
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Paper Deep Reader (`paper-deep-reader`)
@@ -63,9 +63,9 @@ Three orthogonal visual tracks (all aligned to the Warm Paper Morandi palette in
    - Use **target-language labels** (e.g. 100% Simplified Chinese with standard English acronyms/symbols for Chinese reports); never insert an English-only concept graphic into a Chinese reading page.
    - Optional AI concept figure: Only if the environment has an image-generation tool and the user wants an AI conceptual anchor, generate at most 1 `paper-figure` image strictly matching the target language and Warm Paper Morandi palette, and visually inspect it for zero garbled text. On quota/error or garbled output, default cleanly to a crisp vector SVG.
 2. **Quantitative Statistical Charts (`assets/morandi-academic.mplstyle`, Matplotlib SVG) vs. Original Figure Crops**:
-   - Whenever quantitative comparisons are backed by explicit numbers in paper tables or prose, redraw them as publication-grade Matplotlib vector SVGs using **one consolidated plotting script** (batch generation), then visually inspect every rendered PNG in parallel via `read_file` before embedding.
-   - For photographs, micrographs, observational imagery, or dense continuous curves that have **no raw numeric table** in the paper, crop high-DPI (`220–300 DPI`) original figures directly from the PDF into `.fig-frame` instead of spending multiple rounds reverse-engineering PDF vector paths.
-   - Use **dual-panel** layout only for concise, low-density comparisons (≤8 categories per panel); **split dense charts (≥15 samples or dense annotated scatters) into separate full-width SVGs** so labels remain effortlessly legible inside the `860px` reading column.
+   - Treat every chart as a **visual argument** defending one clear sentence. Whenever numbers exist in tables or prose—or when a small-N original plot uses poor scaling (e.g., linear axis flattening >10× baselines) or jarring default colors—redesign and redraw it as a Morandi vector SVG using **one consolidated plotting script** (batch generation), then visually inspect every rendered PNG in parallel via `read_file`.
+   - Reserve high-DPI (`220–300 DPI`) original PDF crops strictly for genuinely un-redrawable evidence: photographs, micrographs, dense high-frequency raw waveforms, or 100+ point un-tabulated curves whose original rendering is already clean and legible.
+   - Use **dual-panel** layout only for concise, low-density comparisons (≤8 categories per panel); **split dense charts (≥15 samples or dense annotated scatters) into separate full-width SVGs** with bridging prose between figures—never stack multiple figures back-to-back without explanatory text.
 3. **Zero-Dependency Self-Contained Assembly**:
    - Write the page body fragment (`body.html`) using semantic classes from `assets/theme-morandi.css` (sticky masthead, clean left TOC sidebar only, Hero card + flush 4-KPI strip, Executive Summary, `.fig-frame` with `⤢ 放大查看` zoom buttons on every figure, `.eq-box`, `.table-wrap`, `.audit-grid` 2×2, `.transfer-grid`, `.sources-box`). Treat interactive CSS blocks (`.player-*`, `.sandbox-*`, `.explorer-card`) as optional building blocks, not a mandatory checklist.
    - Run `scripts/assemble_html.py` to inline `assets/theme-morandi.css`, `assets/widgets.js` (rAF scroll/TOC sync, `data-ref` linked highlighting, 120fps GPU + debounced crisp vector Pan/Zoom Lightbox), cleaned/ID-prefixed SVGs, and any page-specific interactive JS into one standalone `.html` file.

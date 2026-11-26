@@ -30,6 +30,7 @@ Organize the standalone HTML monograph in a calm, linear scholarly progression t
 ## 2. Prose & De-Noising Discipline
 
 - **Tone**: Natural, restrained, precise academic prose. Preserve exact English technical terms, algorithm names, dataset names, and standard acronyms on first mention.
+- **Prose–figure pacing & sequential numbering**: Never stack two or more `<figure>` cards back-to-back with zero bridging prose between them. Introduce each figure before it appears and interpret its takeaway afterward; give distinct experimental topics their own `<h3>` subsection, and ensure figure numbers (`图 1`, `图 2`, ... / `Figure 1`, `Figure 2`, ...) strictly increase in document order.
 - **Keep facts and inferences distinct without sticker clutter**:
   - Do NOT stamp `[原文核验事实]` on every paragraph, caption, or table. Unmarked statements are understood to be grounded in the source paper.
   - When introducing an analytical inference beyond what the authors explicitly state, signal it naturally in prose (e.g., "原文未解释……；结合……机理分析，可能源于……") and, if dedicated to a figure, add a quiet `机制推断` pill on that figure header only.

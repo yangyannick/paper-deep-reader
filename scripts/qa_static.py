@@ -34,6 +34,7 @@ AI_CLICHES = [
     "奠定了坚实基础",
     "深入探讨",
     "压了一个很硬的赌注",
+    "架构赌注",
     "解剖台",
 ]
 
@@ -91,6 +92,22 @@ def main() -> None:
     visible = re.sub(r"<[^>]+>", " ", prose)
     if "`" in visible:
         warnings.append("Raw backtick (`) found in prose; use <code>...</code> instead.")
+
+    # 6b. Zoom-button integrity & consecutive stacked figures check
+    for idx, fm in enumerate(re.finditer(r"<figure\b[^>]*>.*?</figure>", text, flags=re.S), start=1):
+        block = fm.group(0)
+        if "data-zoom-btn" in block and not re.search(r"<svg\b|<img\b", block):
+            errors.append(f"Figure #{idx} has data-zoom-btn but no zoomable <svg> or <img> inside.")
+    fig_parts = re.split(r"(<figure\b.*?</figure>)", text, flags=re.S)
+    consec_figs = 0
+    for i in range(1, len(fig_parts) - 2, 2):
+        between = fig_parts[i + 1]
+        if "<p" not in between and "<h" not in between and len(re.sub(r"\s+", "", between)) < 40:
+            consec_figs += 1
+    if consec_figs:
+        warnings.append(
+            f"Found {consec_figs} back-to-back <figure> transition(s) with no bridging prose; add transition/analysis paragraphs."
+        )
 
     # 7. Inline JS syntax via node --check
     scripts = re.findall(r"<script(?:\s+[^>]*)?>(.*?)</script>", text, flags=re.S)

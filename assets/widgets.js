@@ -1,4 +1,4 @@
-/* paper-deep-reader: Zero-Dependency Interactive Widgets (v1.0)
+/* paper-deep-reader: Zero-Dependency Interactive Widgets (v1.2)
  * 1. rAF-throttled GPU scroll progress bar + left TOC scroll-spy
  * 2. Prose-to-SVG linked highlighting (data-ref <-> data-ref-node)
  * 3. Two-stage 120fps GPU + debounced crisp vector Pan & Zoom Lightbox
@@ -227,15 +227,16 @@
 
     function openFromFrame(frame) {
       if (!frame) return;
-      const svg = frame.querySelector('.fig-svg-wrap svg');
-      const img = frame.querySelector('img.fig-img');
+      const svg = frame.querySelector('.fig-svg-wrap svg') || frame.querySelector('svg');
+      const img = frame.querySelector('img.fig-img') || frame.querySelector('img.fig-zoomable') || frame.querySelector('img');
       const srcEl = svg || img;
       if (!srcEl) return;
+      const isSvg = srcEl.tagName.toLowerCase() === 'svg';
 
       aspectRatio = detectAspectRatio(srcEl);
       canvasEl.innerHTML = '';
       const clone = srcEl.cloneNode(true);
-      if (svg) {
+      if (isSvg) {
         clone.classList.remove('svg-dimmed');
         clone.querySelectorAll('.is-highlighted').forEach(n => n.classList.remove('is-highlighted'));
         clone.removeAttribute('width');
@@ -318,7 +319,10 @@
       });
     });
 
-    document.querySelectorAll('.fig-frame .fig-zoomable').forEach(el => {
+    document.querySelectorAll('.fig-frame .fig-zoomable, .fig-frame img').forEach(el => {
+      if (el.dataset.zoomBound) return;
+      el.dataset.zoomBound = '1';
+      el.style.cursor = 'zoom-in';
       el.addEventListener('click', () => {
         openFromFrame(el.closest('.fig-frame'));
       });
