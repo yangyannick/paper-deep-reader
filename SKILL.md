@@ -11,7 +11,7 @@ description: >-
   for quick paper questions, brief summaries, or ordinary chat discussions.
 license: MIT
 metadata:
-  version: "1.3.2"
+  version: "1.4.0"
 ---
 
 # Paper Deep Reader (`paper-deep-reader`)
@@ -35,8 +35,8 @@ Always put intermediate files (extracted text, PDF page PNGs, plotting scripts, 
 ## 4-Stage Workflow
 
 ### Stage 1 · Source Grounding & Visual Fidelity Verification
-1. Run `scripts/extract_pdf.py --pdf <paper.pdf> --out <workdir> --pages <all-or-key-pages> --dpi 200` to extract full text and render key pages (all pages for short papers ≤6 pages; pages containing equations, tables, footnotes, and core figures for longer papers) to PNGs.
-2. Visually inspect the rendered page PNGs (`read_file`) to verify every equation, symbol, table value, footnote, and figure caption. Never rely solely on raw PDF text extraction for multi-column tables or formulas.
+1. Verify once which Python executable has `pymupdf`, `matplotlib`, `numpy`, and `PIL`, then reuse that same interpreter for the entire run. Run `scripts/extract_pdf.py --pdf <paper.pdf> --out <workdir>` (defaults to `--pages auto --dpi 150`), which extracts full text, writes `page_index.json`, prints a compact `PAGE_MAP`, and renders ONLY key pages (skipping pure reference walls). For un-redrawable original figures (photos/waveforms), use `--crop PAGE:x0,y0,x1,y1:filename` (`240 DPI`) instead of writing ad-hoc crop scripts.
+2. Visually inspect the recommended page PNGs in **one parallel batch** (`read_file`) to verify every equation, symbol, table value, footnote, and figure caption. Never waste turns inspecting pure reference pages or reading PNGs one by one.
 3. If the paper reports summary totals or grouped metrics across a table, write a brief Python assertion script to cross-check arithmetic consistency and compute key secondary metrics (e.g., absolute vs relative gaps, outlier sensitivity).
 
 ### Stage 2 · Academic Monograph Synthesis & Silent Deep-Audit
@@ -75,9 +75,22 @@ Three orthogonal visual tracks (all aligned to the Warm Paper Morandi palette in
    - **Performance guardrails**: Never add render-blocking Google Fonts `<link>` tags or `backdrop-filter: blur(...)`; keep `ignoredTags: ['script','noscript','style','textarea','pre','code','svg']` in KaTeX auto-render; escape `<` as `&lt;` inside KaTeX math.
 
 ### Stage 4 · Dual-Layer QA & Delivery
-1. **Static QA**: Run `python scripts/qa_static.py <output.html>` and fix every `FAIL` (unreplaced tokens, KaTeX brace/angle errors, duplicate SVG IDs, forbidden QA-noise/AI-cliché strings, broken zoom buttons / stepper / view-switch bindings, JS syntax errors via `node --check`).
-2. **Visual Browser QA**: Run `python scripts/qa_browser_shots.py --html <output.html> --out <workdir>/qa_shots`, inspect the rendered `1440px` PNG slices via `read_file`, fix any layout/wrapping/clipping/spacing issue, and re-verify.
-3. **Deliver HTML only**: Output the standalone `.html` file without overwriting earlier versions. Do NOT export PDF unless the user explicitly asks for one.
+1. **Single-Command Assembly + Dual QA**: Chain `assemble_html.py` → `qa_static.py` → `qa_browser_shots.py` in one shell command (`assemble_html.py` automatically minifies inline CSS and rounds excessive SVG float decimals; `qa_browser_shots.py` runs an automated headless-Chrome DOM geometric audit—checking JS runtime errors, horizontal overflow, broken images, KaTeX errors, and diagram SVG text collisions/clipping/tiny labels—and captures `2000px`-tall `1440px` PNG slices). Fix every `FAIL` and reported geometric issue, inspect the slices in **one parallel `read_file` batch**, polish any visual issue, and re-verify once.
+2. **Deliver HTML only**: Output the standalone `.html` file without overwriting earlier versions. Do NOT export PDF unless the user explicitly asks for one.
+
+---
+
+## Execution Speed & Browser Performance Guardrails
+
+- **Reuse built-in infrastructure, keep full creativity for paper-specific widgets**:
+  - Do NOT re-implement generic plumbing already built into `assets/widgets.js` (TOC/scroll-spy, Lightbox zoom, standard sortable/filterable/CSV tables via `table[data-interactive]`, symbol hover cards via `data-sym`, margin notes, or basic `.fig-steps` / `data-set-view` toggling).
+  - You remain **fully encouraged** to craft bespoke, creative domain-specific interactive visuals via `--extra-js` whenever a paper's core mechanism genuinely benefits from one (e.g., visual byte-lane animations, attention/matrix explorers, physical phase/parameter probes, or interactive state-machine traces)—with no arbitrary line cap; just keep outputs visually intuitive at a glance rather than raw text/Hex dumps or production-scale re-implementations.
+- **Minimize turn count via batching without compressing analytical depth**:
+  - Inspect recommended PDF page PNGs in 1 parallel turn;
+  - Generate all Matplotlib charts in **1 consolidated Python script**, then inspect all preview PNGs in 1 parallel turn;
+  - Write `body.html` in 1 write for short/medium papers, or 2–3 logical section chunks for long papers so deep analysis and worked examples are never truncated (avoid 10+ tiny incremental edits);
+  - Chain assembly + static QA + browser audit/screenshot capture in 1 command.
+- **Prevent browser jank on dense figures**: For Matplotlib scatter/waveform plots with >500 points, pass `rasterized=True` on the dense data artist so axes/text stay sharp SVG while avoiding thousands of slow SVG DOM nodes; keep `data-flow` dots to at most 1 flowchart per page.
 
 ---
 

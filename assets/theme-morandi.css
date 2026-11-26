@@ -162,7 +162,6 @@ body {
   font-size: var(--body-size);
   line-height: 1.86;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 /* Top GPU Scroll Progress Bar */
@@ -733,7 +732,9 @@ tr.is-jump-target {
 .fig-frame, .explorer-card {
   content-visibility: auto;
   contain-intrinsic-size: auto 460px;
+  contain: layout style;
 }
+.table-wrap, .eq-box, .live-card { contain: layout style; }
 .fig-frame {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -773,13 +774,13 @@ tr.is-jump-target {
 .fig-svg-wrap svg { display: block; max-width: 100%; height: auto; }
 .fig-zoomable { cursor: zoom-in; }
 
-/* Dark-Mode Protection for Light-Paper Matplotlib SVGs & Cropped Raster Images */
+/* Dark-Mode Protection for Light-Paper Matplotlib SVGs & Cropped Raster Images (Zero GPU Filter Shader) */
 html[data-theme="dark"] .fig-svg-wrap svg:not(.diag-svg),
 html[data-theme="dark"] .fig-frame img {
-  background: #F2EFE9;
+  background: #E8E4DB;
   border-radius: 8px;
   padding: 6px;
-  filter: brightness(0.92) contrast(1.03);
+  opacity: 0.94;
 }
 /* Hand-drawn semantic diagrams (.diag-svg) adapt natively to Light & Dark tokens */
 .diag-svg text { fill: var(--ink); font-family: var(--font-sans); }
@@ -1637,6 +1638,7 @@ html[data-theme="dark"] .pdr-hl-katex.is-ask.is-linked {
 }
 .mn-card {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
   padding: 0.42rem 0.55rem 0.46rem 0.72rem;

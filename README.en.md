@@ -114,8 +114,8 @@ python scripts/fetch_paper.py --source 1706.03762 --out ./temp/demo
 python scripts/fetch_paper.py --source 10.1038/s41586-021-03819-2 --out ./temp/demo
 python scripts/fetch_paper.py --zotero-query "sparse histograms" --out ./temp/demo
 
-# 2. Extract full text & render 200 DPI verification page PNGs
-python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo --pages 1-6 --dpi 200
+# 2. Extract text, smart page index & targeted 150 DPI verification PNGs (auto-skips pure reference pages)
+python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo
 
 # 3. Assemble standalone HTML (add --offline-katex for 100% air-gapped WOFF2 KaTeX)
 python scripts/assemble_html.py --title "Demo" --body ./temp/demo/body.html --out ./temp/demo/out.html --offline-katex
@@ -123,7 +123,7 @@ python scripts/assemble_html.py --title "Demo" --body ./temp/demo/body.html --ou
 # 4. Run static QA on a generated HTML file (KaTeX, duplicate IDs, stepper/view bindings, JS syntax, clichés)
 python scripts/qa_static.py examples/pinho-2002-demo.html --strict-cliches
 
-# 5. Capture 1440px headless browser slices for visual inspection
+# 5. Capture 1440px headless browser slices & run DOM geometric/runtime audit
 python scripts/qa_browser_shots.py --html examples/pinho-2002-demo.html --out ./temp/demo/qa_shots
 ```
 
@@ -151,7 +151,7 @@ paper-deep-reader/
 │   ├── extract_pdf.py                 # PyMuPDF text extraction & verification page renderer
 │   ├── assemble_html.py               # Single-file HTML bundler (SVG cleaner, ID prefixer, --offline-katex)
 │   ├── qa_static.py                   # Static QA (KaTeX, IDs, interactive bindings, clichés, node --check)
-│   └── qa_browser_shots.py            # Cross-platform 1440px headless visual QA slicer & KaTeX DOM check
+│   └── qa_browser_shots.py            # Cross-platform 1440px visual QA slicer & DOM geometric/runtime auditor
 ├── docs/images/                       # README showcase screenshots
 ├── examples/
 │   └── pinho-2002-demo.html           # Complete standalone HTML demo

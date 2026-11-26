@@ -54,7 +54,8 @@ Always pair **color with shape or line style** (solid vs. dashed, circle vs. dia
 HTML pages have free vertical space and a fixed `~800px` usable figure width inside the `860px` reading column:
 - **Dual-panel horizontal (`figsize=(10.6, 4.6)`)**: Use ONLY when both subplots are concise and low-density (≤8 categories per panel).
 - **Single full-width figure (`figsize=(9.2, 5.0)` to `(9.2, 7.0)`)**: **MANDATORY** whenever a chart displays **≥15 rows/samples** or a **dense annotated scatter/line plot**. Split dense A+B comparisons into separate full-width figures with bridging prose between them.
-- Always keep `svg.fonttype = "none"` (crisp selectable text), export BOTH `.png` (`dpi=220`) and `.svg`, and pass `.svg` files through `scripts/assemble_html.py --svg TOKEN=path.svg` (strips `<metadata>`, normalizes width to `100%`, and isolates internal `clipPath` IDs).
+- Always keep `svg.fonttype = "none"` (crisp selectable text), export BOTH `.png` (`dpi=200`) and `.svg`, and pass `.svg` files through `scripts/assemble_html.py --svg TOKEN=path.svg` (strips `<metadata>`, rounds excessive float decimals to cut SVG size 30–50%, normalizes width to `100%`, and isolates internal `clipPath` IDs).
+- **Dense-data browser performance (`rasterized=True`)**: Whenever a single Matplotlib chart plots **>500 scatter markers or >2,000 dense polyline vertices**, set `rasterized=True` on that dense data artist (`ax.scatter(..., rasterized=True)`) while leaving axes, ticks, annotations, and legends as crisp vector SVG. This prevents multi-thousand-node SVG DOM bloat and keeps browser scrolling at 120fps.
 
 ## 5. Mandatory Render–Inspect–Revise Checklist
 

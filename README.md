@@ -114,8 +114,8 @@ python scripts/fetch_paper.py --source 1706.03762 --out ./temp/demo
 python scripts/fetch_paper.py --source 10.1038/s41586-021-03819-2 --out ./temp/demo
 python scripts/fetch_paper.py --zotero-query "sparse histograms" --out ./temp/demo
 
-# 2. 提取全文并渲染 200 DPI 核验页图
-python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo --pages 1-6 --dpi 200
+# 2. 智能提取全文、页索引与关键页 150 DPI 核验图（自动跳过纯参考文献页）
+python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo
 
 # 3. 组装单文件 HTML（可选 --offline-katex 内联精简 WOFF2 字体实现完全断网查看）
 python scripts/assemble_html.py --title "Demo" --body ./temp/demo/body.html --out ./temp/demo/out.html --offline-katex
@@ -123,7 +123,7 @@ python scripts/assemble_html.py --title "Demo" --body ./temp/demo/body.html --ou
 # 4. 对生成的 HTML 运行静态检查（KaTeX、重复 ID、步进/视图绑定、JS 语法、禁用套话）
 python scripts/qa_static.py examples/pinho-2002-demo.html --strict-cliches
 
-# 5. 捕获 1440px 浏览器截图切片进行视觉审查
+# 5. 捕获 1440px 浏览器截图切片并运行 DOM 几何/运行时自动体检
 python scripts/qa_browser_shots.py --html examples/pinho-2002-demo.html --out ./temp/demo/qa_shots
 ```
 
@@ -151,7 +151,7 @@ paper-deep-reader/
 │   ├── extract_pdf.py                 # PyMuPDF 文本提取与核验页 PNG 渲染
 │   ├── assemble_html.py               # 单文件 HTML 组装器（SVG 清理、ID 隔离与 --offline-katex）
 │   ├── qa_static.py                   # 静态质检脚本（公式、ID、交互绑定、套话、node --check）
-│   └── qa_browser_shots.py            # 跨平台无头浏览器 1440px 截图切片与 KaTeX DOM 检查
+│   └── qa_browser_shots.py            # 跨平台无头浏览器 1440px 截图切片与 DOM 几何/运行时体检
 ├── docs/images/                       # README 展示截图
 ├── examples/
 │   └── pinho-2002-demo.html           # 完整单文件 HTML 示例
