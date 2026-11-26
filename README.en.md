@@ -114,7 +114,7 @@ python scripts/fetch_paper.py --source 1706.03762 --out ./temp/demo
 python scripts/fetch_paper.py --source 10.1038/s41586-021-03819-2 --out ./temp/demo
 python scripts/fetch_paper.py --zotero-query "sparse histograms" --out ./temp/demo
 
-# 2. Extract text, smart page index & targeted 150 DPI verification PNGs (auto-skips pure reference pages)
+# 2. Extract full text, page index & all-page 150 DPI verification PNGs (zero omitted body/footnotes/appendices)
 python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo
 
 # 3. Assemble standalone HTML (add --offline-katex for 100% air-gapped WOFF2 KaTeX)

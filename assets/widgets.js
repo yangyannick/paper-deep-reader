@@ -60,6 +60,7 @@
         mdCopied: '已复制 Markdown，可直接粘贴到笔记或发给 AI',
         lbTitle: '图表放大查看',
         lbHint: '滚轮缩放 · 拖拽平移 · 双击还原',
+        lbStepHint: '← / → 切步 · 空格播放',
         lbOut: '缩小',
         lbIn: '放大',
         lbFit: '复位',
@@ -111,6 +112,7 @@
         mdCopied: 'Copied Markdown to clipboard',
         lbTitle: 'Inspect Figure',
         lbHint: 'Wheel to zoom · Drag to pan · Double-click to reset',
+        lbStepHint: '← / → step · Space play',
         lbOut: 'Zoom out',
         lbIn: 'Zoom in',
         lbFit: 'Reset',
@@ -299,7 +301,8 @@
   // 2. Navigation Progress & Option B Frameless Outline + Quiet Collapsible Figure/Eq Drawers
   (function initNavigationAndSidebar() {
     const bar = document.getElementById('scroll-progress');
-    const tocList = document.getElementById('toc-list');
+    const tocList = document.getElementById('toc-list')
+      || document.querySelector('.toc-card .toc-list, .sidebar .toc-list, ul.toc-list');
     const tocLinks = tocList ? Array.from(tocList.querySelectorAll('a')) : [];
     const sections = tocLinks.map(a => {
       const href = a.getAttribute('href') || '';
@@ -308,13 +311,16 @@
 
     let footerPos = null;
     let miniFill = null;
-    const tocCard = tocList ? tocList.closest('.toc-card') : null;
+    const tocCard = tocList
+      ? (tocList.closest('.toc-card') || tocList.closest('nav') || tocList.closest('.sidebar'))
+      : null;
+    const mainScope = document.querySelector('.article-main') || document.querySelector('main') || document.body;
     if (tocCard && tocList) {
       const heading = tocCard.querySelector('.toc-heading');
       if (heading && !heading.textContent.trim()) heading.textContent = ui.outlineCap;
 
-      const figs = Array.from(document.querySelectorAll('.article-main figure.fig-frame'));
-      const eqs = Array.from(document.querySelectorAll('.article-main .eq-box'));
+      const figs = Array.from(mainScope.querySelectorAll('.fig-frame'));
+      const eqs = Array.from(mainScope.querySelectorAll('.eq-box'));
       figs.forEach((f, i) => { if (!f.id) f.id = 'pdr-fig-' + (i + 1); });
       eqs.forEach((e, i) => { if (!e.id) e.id = 'pdr-eq-' + (i + 1); });
 
@@ -368,9 +374,10 @@
         tocList.insertAdjacentElement('afterend', foldGroup);
       }
 
-      // Reading progress bar & estimated reading time footer
-      const mainEl = document.querySelector('.article-main');
-      const rawTxt = mainEl ? mainEl.textContent || '' : '';
+      // Reading progress bar & estimated reading time footer (exclude SVG/MathML/chrome tokens)
+      const txtClone = mainScope.cloneNode(true);
+      txtClone.querySelectorAll('svg, script, style, .katex-mathml, .tbl-tools, .steps-bar').forEach(el => el.remove());
+      const rawTxt = txtClone.textContent || '';
       const cjk = (rawTxt.match(/[\u4e00-\u9fff]/g) || []).length;
       const latin = (rawTxt.replace(/[\u4e00-\u9fff]/g, ' ').match(/[A-Za-z0-9]+/g) || []).length;
       const mins = Math.max(2, Math.round(cjk / 420 + latin / 220));
@@ -675,13 +682,48 @@
 
   // 5. Declarative Flowchart Stepper & Proportional Flow Dots (.fig-steps)
   (function initDeclarativeSteppers() {
+    function parseStepTokens(el, total) {
+      return (el.getAttribute('data-step') || '').trim().split(/\s+/).map(tok => {
+        if (tok === 'final') return total;
+        const v = Number(tok);
+        return Number.isFinite(v) ? v : -1;
+      }).filter(v => v >= 0);
+    }
+
+    function syncStepperDom(container, cur, stillMode, total) {
+      container.classList.toggle('is-still', !!stillMode);
+      container.classList.toggle('is-full', cur === total);
+      const sEls = Array.from(container.querySelectorAll('[data-step]'))
+        .filter(el => !el.closest('.steps-notes') && !el.closest('.step-vals'));
+      sEls.forEach(el => {
+        const nums = parseStepTokens(el, total);
+        if (!nums.length) return;
+        const isOnly = el.classList.contains('step-only');
+        const onNow = nums.includes(cur);
+        if (isOnly) {
+          el.classList.toggle('is-now', onNow);
+        } else {
+          el.classList.toggle('is-on', nums[0] <= cur);
+          el.classList.toggle('is-now', onNow);
+        }
+      });
+      container.querySelectorAll('.step-vals').forEach(grp => {
+        const kids = Array.from(grp.querySelectorAll('[data-step]'));
+        let best = null;
+        let bestStep = -1;
+        kids.forEach(kid => {
+          parseStepTokens(kid, total).forEach(s => {
+            if (s <= cur && s >= bestStep) { bestStep = s; best = kid; }
+          });
+        });
+        kids.forEach(kid => kid.classList.toggle('is-val-active', kid === best));
+      });
+    }
+
     document.querySelectorAll('.fig-steps').forEach(root => {
       const notes = Array.from(root.querySelectorAll('.steps-notes > li'));
       const n = notes.length;
       if (!n) return;
-
-      const stepEls = Array.from(root.querySelectorAll('[data-step]')).filter(el => !el.closest('.steps-notes') && !el.closest('.step-vals'));
-      const valGroups = Array.from(root.querySelectorAll('.step-vals'));
 
       let bar = root.querySelector('.steps-bar');
       if (!bar) {
@@ -705,57 +747,42 @@
       const playBtn = bar.querySelector('[data-step-play]');
       const badge = bar.querySelector('[data-step-badge]');
       let idx = n - 1;
+      let stillState = true;
       let timer = 0;
 
-      function parseSteps(el) {
-        return (el.getAttribute('data-step') || '').trim().split(/\s+/).map(tok => {
-          if (tok === 'final') return n;
-          const v = Number(tok);
-          return Number.isFinite(v) ? v : -1;
-        }).filter(v => v >= 0);
+      function emitState() {
+        root.dispatchEvent(new CustomEvent('pdr:step', {
+          detail: { step: idx + 1, index: idx, total: n, still: stillState, playing: !!timer },
+        }));
       }
 
       function show(k, stillMode) {
         idx = Math.max(0, Math.min(n - 1, k));
+        stillState = !!stillMode;
         const cur = idx + 1;
-        root.classList.toggle('is-still', !!stillMode);
-        root.classList.toggle('is-full', idx === n - 1);
-
-        stepEls.forEach(el => {
-          const nums = parseSteps(el);
-          if (!nums.length) return;
-          const isOnly = el.classList.contains('step-only');
-          const onNow = nums.includes(cur);
-          if (isOnly) {
-            el.classList.toggle('is-now', onNow);
-          } else {
-            el.classList.toggle('is-on', nums[0] <= cur);
-            el.classList.toggle('is-now', onNow);
-          }
-        });
-
-        valGroups.forEach(grp => {
-          const kids = Array.from(grp.querySelectorAll('[data-step]'));
-          let best = null;
-          let bestStep = -1;
-          kids.forEach(kid => {
-            const nums = parseSteps(kid);
-            nums.forEach(s => {
-              if (s <= cur && s >= bestStep) { bestStep = s; best = kid; }
-            });
-          });
-          kids.forEach(kid => kid.classList.toggle('is-val-active', kid === best));
-        });
-
+        syncStepperDom(root, cur, stillState, n);
         notes.forEach((li, j) => { li.hidden = j !== idx; });
         if (range) range.value = String(idx);
         if (badge) badge.textContent = cur + ' / ' + n;
-        root.dispatchEvent(new CustomEvent('pdr:step', { detail: { step: cur, total: n } }));
+        emitState();
       }
 
       function stop() {
+        const wasPlaying = !!timer;
         if (timer) { clearInterval(timer); timer = 0; }
         if (playBtn) playBtn.textContent = ui.play;
+        if (wasPlaying) emitState();
+      }
+
+      function togglePlay() {
+        if (timer) { stop(); return; }
+        if (idx === n - 1) show(0, false);
+        if (playBtn) playBtn.textContent = ui.pause;
+        timer = setInterval(() => {
+          if (idx < n - 1) show(idx + 1, false);
+          else stop();
+        }, 2800);
+        emitState();
       }
 
       bar.addEventListener('click', (e) => {
@@ -765,15 +792,7 @@
           show(idx + Number(go.getAttribute('data-step-go')), false);
           return;
         }
-        if (e.target.closest('[data-step-play]')) {
-          if (timer) { stop(); return; }
-          if (idx === n - 1) show(0, false);
-          if (playBtn) playBtn.textContent = ui.pause;
-          timer = setInterval(() => {
-            if (idx < n - 1) show(idx + 1, false);
-            else stop();
-          }, 2800);
-        }
+        if (e.target.closest('[data-step-play]')) togglePlay();
       });
 
       if (range) {
@@ -782,6 +801,19 @@
           show(Number(range.value), false);
         });
       }
+
+      root._pdrStepper = {
+        count: n,
+        getIndex: () => idx,
+        isStill: () => stillState,
+        isPlaying: () => !!timer,
+        show,
+        go: (delta) => { stop(); show(idx + delta, false); },
+        togglePlay,
+        stop,
+        applyTo: (targetEl) => syncStepperDom(targetEl, idx + 1, stillState, n),
+        getNoteEl: (k) => notes[k] || null,
+      };
 
       show(n - 1, true);
       window.addEventListener('beforeprint', () => { stop(); show(n - 1, true); });
@@ -896,6 +928,7 @@
           const allowed = (p.getAttribute('data-view-panel') || '').trim().split(/\s+/);
           p.classList.toggle('is-view-hidden', !allowed.includes(key));
         });
+        frame.dispatchEvent(new CustomEvent('pdr:view', { detail: { view: key } }));
       }
 
       btns.forEach(b => {
@@ -904,6 +937,12 @@
           applyView(b.getAttribute('data-set-view'));
         });
       });
+
+      frame._pdrView = {
+        views: btns.map(b => ({ key: b.getAttribute('data-set-view'), label: b.textContent.trim() })),
+        getActive: () => frame.getAttribute('data-view') || '',
+        setView: applyView,
+      };
 
       const initial = frame.getAttribute('data-view')
         || (btns.find(b => b.classList.contains('is-active')) || btns[0]).getAttribute('data-set-view');
@@ -1078,7 +1117,7 @@
     });
   })();
 
-  // 8. Cross-Reference Anchor Jump + Auto Title Hint
+  // 8. Cross-Reference Anchor Jump + Clickable Diagram Section Jumps (data-jump)
   (function initXrefs() {
     document.querySelectorAll('.article-main a[href^="#"]').forEach(a => {
       const id = (a.getAttribute('href') || '').slice(1);
@@ -1092,6 +1131,29 @@
       a.addEventListener('click', (e) => {
         e.preventDefault();
         jumpToElement(target, true);
+      });
+    });
+
+    // Interactive section/target jumps inside overview flowcharts & mind maps
+    document.querySelectorAll('[data-jump]').forEach(el => {
+      const raw = (el.getAttribute('data-jump') || '').trim();
+      const id = raw.startsWith('#') ? raw.slice(1) : raw;
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (!target) return;
+      el.classList.add('pdr-jump-node');
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      if (!el.getAttribute('role')) el.setAttribute('role', 'link');
+      const activate = (e) => {
+        e.stopPropagation();
+        jumpToElement(target, true);
+      };
+      el.addEventListener('click', activate);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activate(e);
+        }
       });
     });
   })();
@@ -1747,13 +1809,16 @@
     });
   })();
 
-  // 10. Fullscreen Two-Stage Vector Pan & Zoom Lightbox (Lazy DOM Construction on First Open)
+  // 10. Fullscreen Two-Stage Vector Pan & Zoom Lightbox (Interactive Stepper & View-Switch Preserved)
   (function initLightbox() {
     let overlay = null;
     let titleEl = null;
     let canvasEl = null;
     let stageEl = null;
+    let footEl = null;
     let zoomValEl = null;
+    let activeFrame = null;
+    let activeCleanup = null;
 
     const MIN_SCALE = 0.5;
     const MAX_SCALE = 5.0;
@@ -1853,6 +1918,10 @@
     function closeLightbox() {
       if (!overlay) return;
       if (crispTimer) { clearTimeout(crispTimer); crispTimer = 0; }
+      if (activeCleanup) { activeCleanup(); activeCleanup = null; }
+      activeFrame = null;
+      canvasEl.classList.remove('fig-steps', 'is-still', 'is-full');
+      if (footEl) { footEl.innerHTML = ''; footEl.hidden = true; }
       overlay.classList.remove('is-open');
       document.body.style.overflow = '';
       dragging = false;
@@ -1881,6 +1950,7 @@
               '<div class="lightbox-stage" id="lb-stage">' +
                 '<div class="lightbox-canvas" id="lb-canvas"></div>' +
               '</div>' +
+              '<div class="lightbox-foot" id="lb-foot" hidden></div>' +
             '</div>' +
           '</div>';
         document.body.appendChild(tpl.firstElementChild);
@@ -1889,6 +1959,7 @@
       titleEl = document.getElementById('lb-title');
       canvasEl = document.getElementById('lb-canvas');
       stageEl = document.getElementById('lb-stage');
+      footEl = document.getElementById('lb-foot');
       zoomValEl = document.getElementById('lb-zoom-val');
 
       stageEl.addEventListener('wheel', (e) => {
@@ -1945,16 +2016,19 @@
         else if (e.key === '+' || e.key === '=') zoomCenter(1.25);
         else if (e.key === '-') zoomCenter(1 / 1.25);
         else if (e.key === '0') fitToStage();
+        else if (activeFrame && activeFrame._pdrStepper) {
+          if (e.key === 'ArrowLeft') { e.preventDefault(); activeFrame._pdrStepper.go(-1); }
+          else if (e.key === 'ArrowRight') { e.preventDefault(); activeFrame._pdrStepper.go(1); }
+          else if (e.key === ' ' && !(e.target && e.target.closest && e.target.closest('button, input'))) {
+            e.preventDefault();
+            activeFrame._pdrStepper.togglePlay();
+          }
+        }
       });
     }
 
-    function openFromFrame(frame) {
-      if (!frame) return;
-      const srcEl = pickVisibleGraphic(frame);
-      if (!srcEl) return;
-      ensureLightbox();
+    function mountGraphicClone(srcEl, frame) {
       const isSvg = srcEl.tagName.toLowerCase() === 'svg';
-
       aspectRatio = detectAspectRatio(srcEl);
       canvasEl.innerHTML = '';
       canvasEl.classList.toggle('is-diag-canvas', isSvg && srcEl.classList.contains('diag-svg'));
@@ -1962,10 +2036,153 @@
       if (isSvg) {
         clone.classList.remove('svg-dimmed');
         clone.querySelectorAll('.is-highlighted').forEach(n => n.classList.remove('is-highlighted'));
+        clone.querySelectorAll('circle.flow-dot').forEach(dot => dot.remove());
         clone.removeAttribute('width');
         clone.removeAttribute('height');
       }
       canvasEl.appendChild(clone);
+      if (frame && frame._pdrStepper) {
+        canvasEl.classList.add('fig-steps');
+        frame._pdrStepper.applyTo(canvasEl);
+      } else {
+        canvasEl.classList.remove('fig-steps', 'is-still', 'is-full');
+      }
+    }
+
+    function openFromFrame(frame) {
+      if (!frame) return;
+      const srcEl = pickVisibleGraphic(frame);
+      if (!srcEl) return;
+      ensureLightbox();
+      if (activeCleanup) { activeCleanup(); activeCleanup = null; }
+      activeFrame = frame;
+
+      mountGraphicClone(srcEl, frame);
+
+      // Build interactive footer dock when figure has stepper and/or view-switch controls
+      const stepper = frame._pdrStepper || null;
+      const viewCtl = frame._pdrView || null;
+      const cleanups = [];
+      if (footEl) {
+        footEl.innerHTML = '';
+        if (stepper || viewCtl) {
+          const barRow = document.createElement('div');
+          barRow.className = 'lb-foot-bar';
+
+          if (viewCtl && viewCtl.views.length) {
+            const vWrap = document.createElement('div');
+            vWrap.className = 'view-switch';
+            vWrap.setAttribute('role', 'group');
+            const vBtns = viewCtl.views.map(v => {
+              const b = document.createElement('button');
+              b.type = 'button';
+              b.className = 'view-btn' + (viewCtl.getActive() === v.key ? ' is-active' : '');
+              b.textContent = v.label;
+              b.setAttribute('aria-pressed', viewCtl.getActive() === v.key ? 'true' : 'false');
+              b.addEventListener('click', () => viewCtl.setView(v.key));
+              vWrap.appendChild(b);
+              return { key: v.key, btn: b };
+            });
+            barRow.appendChild(vWrap);
+
+            const onViewChange = (ev) => {
+              const key = (ev && ev.detail && ev.detail.view) || viewCtl.getActive();
+              vBtns.forEach(item => {
+                const on = item.key === key;
+                item.btn.classList.toggle('is-active', on);
+                item.btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+              });
+              const innerPanels = Array.from(canvasEl.querySelectorAll('[data-view-panel]'));
+              if (innerPanels.length) {
+                innerPanels.forEach(p => {
+                  const allowed = (p.getAttribute('data-view-panel') || '').trim().split(/\s+/);
+                  p.classList.toggle('is-view-hidden', !allowed.includes(key));
+                });
+              } else {
+                const nextSrc = pickVisibleGraphic(frame);
+                if (nextSrc) {
+                  mountGraphicClone(nextSrc, frame);
+                  fitToStage();
+                }
+              }
+            };
+            frame.addEventListener('pdr:view', onViewChange);
+            cleanups.push(() => frame.removeEventListener('pdr:view', onViewChange));
+          }
+
+          let noteBox = null;
+          if (stepper) {
+            const bPrev = document.createElement('button');
+            bPrev.type = 'button';
+            bPrev.className = 'btn';
+            bPrev.textContent = ui.prev;
+            bPrev.addEventListener('click', () => stepper.go(-1));
+
+            const bPlay = document.createElement('button');
+            bPlay.type = 'button';
+            bPlay.className = 'btn btn-primary';
+            bPlay.textContent = stepper.isPlaying() ? ui.pause : ui.play;
+            bPlay.addEventListener('click', () => stepper.togglePlay());
+
+            const rng = document.createElement('input');
+            rng.type = 'range';
+            rng.className = 'player-range';
+            rng.min = '0';
+            rng.max = String(stepper.count - 1);
+            rng.value = String(stepper.getIndex());
+            rng.setAttribute('aria-label', 'Step');
+            rng.addEventListener('input', () => {
+              stepper.stop();
+              stepper.show(Number(rng.value), false);
+            });
+
+            const bNext = document.createElement('button');
+            bNext.type = 'button';
+            bNext.className = 'btn';
+            bNext.textContent = ui.next;
+            bNext.addEventListener('click', () => stepper.go(1));
+
+            const bdg = document.createElement('span');
+            bdg.className = 'step-badge';
+            bdg.textContent = (stepper.getIndex() + 1) + ' / ' + stepper.count;
+
+            const hint = document.createElement('span');
+            hint.className = 'lb-step-hint';
+            hint.textContent = ui.lbStepHint;
+
+            barRow.append(bPrev, bPlay, rng, bNext, bdg, hint);
+
+            noteBox = document.createElement('div');
+            noteBox.className = 'lb-step-note';
+
+            const syncLbStep = () => {
+              stepper.applyTo(canvasEl);
+              const idx = stepper.getIndex();
+              rng.value = String(idx);
+              bdg.textContent = (idx + 1) + ' / ' + stepper.count;
+              bPlay.textContent = stepper.isPlaying() ? ui.pause : ui.play;
+              noteBox.innerHTML = '';
+              const srcLi = stepper.getNoteEl(idx);
+              if (srcLi) {
+                Array.from(srcLi.childNodes).forEach(node => noteBox.appendChild(node.cloneNode(true)));
+              }
+            };
+            syncLbStep();
+            frame.addEventListener('pdr:step', syncLbStep);
+            cleanups.push(() => {
+              frame.removeEventListener('pdr:step', syncLbStep);
+              stepper.stop();
+            });
+          }
+
+          footEl.appendChild(barRow);
+          if (noteBox) footEl.appendChild(noteBox);
+          footEl.hidden = false;
+        } else {
+          footEl.hidden = true;
+        }
+      }
+      activeCleanup = () => cleanups.forEach(fn => fn());
 
       const t = frame.getAttribute('data-lightbox-title')
         || (frame.querySelector('.fig-title') ? frame.querySelector('.fig-title').textContent.trim() : ui.lbTitle);

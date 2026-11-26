@@ -137,6 +137,10 @@ def main() -> None:
                 warnings.append(f"Symbol ref data-sym=\"{tag_m.group(1)}\" has no data-sym-table/data-sym-def or data-sym-tip.")
                 break
 
+    # 6d. Sidebar TOC link integrity
+    if re.search(r'class="[^"]*\bsidebar\b[^"]*"', dom_only) and not re.search(r'id="toc-list"|class="[^"]*\btoc-list\b[^"]*"', dom_only):
+        warnings.append("Sidebar found without #toc-list / .toc-list; collapsible figure/equation drawers will not attach.")
+
     # 7. Inline JS syntax via node --check
     scripts = re.findall(r"<script(?:\s+[^>]*)?>(.*?)</script>", text, flags=re.S)
     inline_js = [s for s in scripts if s.strip()]

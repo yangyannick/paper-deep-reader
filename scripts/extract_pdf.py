@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Extract full text, build a smart page index, and render targeted PDF PNGs for visual verification.
+"""Extract full text, build a page index, and render all PDF pages to PNGs for visual verification.
 
 Usage:
   python scripts/extract_pdf.py --pdf path/to/paper.pdf --out workdir
-  python scripts/extract_pdf.py --pdf path/to/paper.pdf --out workdir --pages all --dpi 160
+  python scripts/extract_pdf.py --pdf path/to/paper.pdf --out workdir --pages 1-8 --dpi 160
   python scripts/extract_pdf.py --pdf path/to/paper.pdf --out workdir --crop 5:0.06,0.08,0.94,0.45:fig3.png
 """
 import argparse
@@ -16,10 +16,14 @@ try:
 except ImportError:
     import fitz
 
-TABLE_RE = re.compile(r"\b(?:Table|TABLE|Tab\.)\s+[IVX\d]+|\b(?:表)\s*\d+")
-FIG_RE = re.compile(r"\b(?:Figure|FIGURE|Fig\.)\s+[IVX\d]+|\b(?:图)\s*\d+")
-MATH_RE = re.compile(r"\(\d+\)\s*$|∑|∫|≈|≤|≥|±|√|λ|α|β|γ|σ|θ|ω|∇|∂", re.M)
+TABLE_RE = re.compile(r"\b(?:Table|TABLE|Tab\.)\s+[IVX\d]+[\.:]|\b表\s*\d+")
+FIG_RE = re.compile(r"\b(?:Figure|FIGURE|Fig\.)\s+[IVX\d]+[\.:]|\b图\s*\d+")
+MATH_RE = re.compile(r"\(\d+\)\s*$|∑|∫|≈|≤|≥|±|√|≠|≡|∈|∞|λ|α|β|γ|σ|θ|ω|∇|∂|Σ|Δ|Φ|Ψ|Ω", re.M)
 REF_HEAD_RE = re.compile(r"^\s*(?:\d+\.?\s*)?(?:REFERENCES|References|BIBLIOGRAPHY|Bibliography|参考文献)\s*$", re.M)
+APPENDIX_HEAD_RE = re.compile(
+    r"^\s*(?:Appendix(?:\s+[A-Z0-9]+)?|APPENDIX(?:\s+[A-Z0-9]+)?|Supplementary(?:\s+\w+)?|Extended\s+Data|Methods|附录)\b",
+    re.M,
+)
 
 
 def parse_pages(spec: str, total: int, recommended: list[int]) -> list[int]:
@@ -64,28 +68,22 @@ def analyze_pages(doc: "fitz.Document") -> tuple[list[dict], list[str], list[int
         has_fig = bool(FIG_RE.search(txt))
         has_math = bool(MATH_RE.search(txt))
 
-        # Detect pure bibliography tail pages (skip rendering unless they also contain figures/tables)
-        if page_no > max(2, total // 2) and REF_HEAD_RE.search(txt):
+        # Tag 100% pure bibliography pages as informational metadata only:
+        # - Never mark mixed "body/conclusions + References" pages as pure refs (>200 chars before heading)
+        # - Reset in_refs when an Appendix / Supplementary / Methods section begins after References
+        ref_m = REF_HEAD_RE.search(txt)
+        app_m = APPENDIX_HEAD_RE.search(txt)
+        if in_refs and app_m and (not ref_m or app_m.start() > ref_m.start()):
+            in_refs = False
+        if page_no > max(2, total // 2) and ref_m:
+            before_refs = re.sub(r"\s+", " ", txt[:ref_m.start()]).strip()
+            is_pure_refs = (len(before_refs) <= 200) and not has_table and not has_fig and images == 0
             in_refs = True
-        starts_with_ref_entry = bool(re.match(r"^\s*(?:\[\d+\]|\d+\.\s+[A-Z][a-z]+,)", txt.strip()))
-        is_pure_refs = in_refs and (page_no > 1) and not has_table and not has_fig and images == 0 and (
-            starts_with_ref_entry or not REF_HEAD_RE.search(txt)
-        )
-
-        # Smart recommendation:
-        # - Short papers (<=6 pages): render every non-pure-reference page
-        # - Longer papers (>6 pages): render page 1 + pages containing figures, tables, images, dense vector plots, or equations
-        if total <= 6:
-            rec = not is_pure_refs
         else:
-            rec = (
-                page_no == 1
-                or has_table
-                or has_fig
-                or images > 0
-                or drawings >= 35
-                or (has_math and not is_pure_refs)
-            ) and not is_pure_refs
+            is_pure_refs = in_refs and (page_no > 1) and not has_table and not has_fig and images == 0
+
+        # Non-pure-reference pages are always recommended (default CLI mode renders all pages)
+        rec = not is_pure_refs
 
         index.append({
             "page": page_no,
@@ -132,8 +130,8 @@ def main() -> None:
     ap.add_argument("--out", required=True, help="Output directory for text, index, and page PNGs.")
     ap.add_argument(
         "--pages",
-        default="auto",
-        help="Pages to render: 'auto' (default, skips pure reference pages & non-visual walls), 'all', 'none', or e.g. '1,2,4-6'.",
+        default="all",
+        help="Pages to render: 'all' (default, renders every page so no content is omitted), 'auto' (skip pure-reference pages only), 'none', or e.g. '1,2,4-6'.",
     )
     ap.add_argument("--dpi", type=int, default=150, help="Render DPI for verification page PNGs (default: 150).")
     ap.add_argument(
@@ -185,7 +183,7 @@ def main() -> None:
         if row["has_math"]:
             tags.append("eq")
         if row["is_pure_refs"]:
-            tags.append("refs-skip")
+            tags.append("refs-only")
         if row["page"] in render_list:
             tags.append("PNG")
         flags_summary.append(f"p{row['page']}({'/'.join(tags) or 'txt'})")

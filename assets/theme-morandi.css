@@ -793,6 +793,16 @@ html[data-theme="dark"] .fig-frame img {
 .diag-svg .d-edge { fill: none; stroke: var(--muted); stroke-width: 1.6; }
 .diag-svg .d-edge-hot { fill: none; stroke: var(--teal); stroke-width: 2.2; }
 .diag-svg .d-bnd { fill: none; stroke: var(--border-strong); stroke-dasharray: 5 4; }
+.diag-svg .pdr-jump-node { cursor: pointer; transition: filter 0.16s ease, opacity 0.16s ease; }
+.diag-svg .pdr-jump-node:hover,
+.diag-svg .pdr-jump-node:focus-visible {
+  filter: drop-shadow(0 2px 6px rgba(38, 88, 103, 0.30));
+  outline: none;
+}
+html[data-theme="dark"] .diag-svg .pdr-jump-node:hover,
+html[data-theme="dark"] .diag-svg .pdr-jump-node:focus-visible {
+  filter: drop-shadow(0 2px 8px rgba(122, 179, 196, 0.42));
+}
 
 .fig-caption {
   margin-top: 0.72rem;
@@ -854,8 +864,8 @@ html[data-theme="dark"] .fig-frame img {
   transition: stroke-dashoffset 0.55s ease, opacity 0.28s ease;
 }
 .fig-steps path[pathLength="1"][data-step].is-on { stroke-dashoffset: 0; }
-.fig-steps .step-vals > [data-step] { display: none; opacity: 1; }
-.fig-steps .step-vals > [data-step].is-val-active { display: inline; opacity: 1; }
+.step-vals > [data-step] { display: none; opacity: 1; }
+.step-vals > [data-step].is-val-active { display: inline; opacity: 1; }
 /* Linked highlighting always overrides stepper rest states (including final step .is-still.is-now) */
 .fig-steps .svg-dimmed [data-step],
 .fig-steps .svg-dimmed [data-step].is-on,
@@ -1030,6 +1040,20 @@ details.deep-dive > summary:hover { background: var(--teal-soft); }
   justify-content: space-between;
   gap: 0.5rem;
 }
+.eq-note {
+  margin-top: 0.62rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--border-strong);
+  font-size: 0.855rem;
+  line-height: 1.68;
+  color: var(--ink-body);
+}
+.eq-note p {
+  margin: 0 0 0.36rem;
+  text-align: justify;
+}
+.eq-note p:last-child { margin-bottom: 0; }
+.eq-note strong { color: var(--teal-deep); }
 
 /* Academic Tables & Declarative Interactive Table Toolbar */
 .table-wrap {
@@ -1845,6 +1869,39 @@ html[data-theme="dark"] .lightbox-canvas.is-diag-canvas { background: var(--surf
   height: 100%;
   display: block;
   pointer-events: none;
+}
+.lightbox-foot {
+  padding: 0.62rem 1.1rem 0.72rem;
+  background: var(--surface-tint);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+}
+.lb-foot-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.lb-foot-bar .player-range { flex: 1; min-width: 110px; accent-color: var(--teal); }
+.lb-step-hint {
+  font-size: 0.72rem;
+  color: var(--muted-light);
+  margin-left: 0.2rem;
+  white-space: nowrap;
+}
+.lb-step-note {
+  padding: 0.48rem 0.78rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--teal);
+  font-size: 0.83rem;
+  line-height: 1.56;
+  color: var(--ink-body);
+  max-height: 4.8em;
+  overflow-y: auto;
 }
 
 /* Reduced Motion Respect */

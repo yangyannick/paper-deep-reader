@@ -114,7 +114,7 @@ python scripts/fetch_paper.py --source 1706.03762 --out ./temp/demo
 python scripts/fetch_paper.py --source 10.1038/s41586-021-03819-2 --out ./temp/demo
 python scripts/fetch_paper.py --zotero-query "sparse histograms" --out ./temp/demo
 
-# 2. 智能提取全文、页索引与关键页 150 DPI 核验图（自动跳过纯参考文献页）
+# 2. 提取全文、页索引与全页 150 DPI 核验图（不遗漏正文、脚注与附录）
 python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo
 
 # 3. 组装单文件 HTML（可选 --offline-katex 内联精简 WOFF2 字体实现完全断网查看）

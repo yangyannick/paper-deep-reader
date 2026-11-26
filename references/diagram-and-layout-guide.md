@@ -21,26 +21,30 @@ Use CSS variables inside hand-drawn diagrams (`class="diag-svg"`) so flowcharts 
 
 ---
 
-## 2. Four Structured Flowchart Archetypes (Pick 1–2 That Clarify)
+## 2. Five Structured Diagram Archetypes (Pick 1–2 That Clarify)
 
-Every technical paper monograph should include at least one substantive flowchart or mechanism diagram—never empty boxes with names alone:
+Every paper monograph should pair a **bird's-eye whole-paper orientation** with **zoomed-in mechanism/protocol clarity**—never empty boxes with names alone, and never two diagrams repeating the same scope:
 
-1. **End-to-End Method / Data-Flow Flowchart** *(algorithms, ML architectures, signal processing, systems)*:
-   - Annotate edges with **tensor shapes / data types / bit-widths**, attach **equation tags** (`Eq. 3`), and mark **bottlenecks or branches**.
-   - **High-leverage upgrade**: Attach `.fig-steps` + `.step-vals` so the worked numerical micro-example flows step-by-step right through the flowchart!
-2. **Decision Tree / Conditional Routing Flowchart** *(adaptive control, codecs, state machines, clinical/protocol branching)*:
-   - Consolidate scattered `if/else` thresholds, escape paths, and fallback branches onto one clean orthogonal tree with explicit trigger predicates on every edge.
-3. **Experimental Protocol & Sample-Flow Diagram** *(experimental physics, clinical, empirical, large-scale benchmarks)*:
-   - Show raw cohort/dataset size → exclusion/filtering criteria (including footnote rules) → experimental arms/splits → final metric accounting. Makes evidence boundaries visible at a glance.
-4. **Same-Coordinate Before / After Mechanism Diff** *(method improvements; ideal in Executive Summary or Section 01)*:
-   - Keep identical node geometry and wire `[data-set-view="before"]` / `[data-set-view="after"]` so readers toggle between baseline failure and proposed fix in place.
-
-*(For pure mathematical proofs or surveys without stage pipelines, use a **Lemma→Theorem Dependency SVG** or **Taxonomy Tree SVG** instead of forcing a pipeline flowchart.)*
+1. **Whole-Paper Logic Panorama / Mind Map** *(ideal right after Executive Summary for ANY paper type)*:
+   - Gives readers a 1-glance overview of the entire paper's argument skeleton (e.g., *Problem / Constraints → Core Method Pillars or Taxonomy Branches → Key Findings / Regimes → Scope & Boundaries*), adapted to the paper:
+     - *Method / Systems / Empirical papers*: structured 4-stage causal flow (10–14 concise nodes with key numbers on branches);
+     - *Surveys / Taxonomies / Comparative papers*: clean 2–3 level hierarchical mind map / taxonomy tree;
+     - *Theory / Proof papers*: Assumption → Lemma → Main Theorem → Corollary dependency DAG.
+   - Attach `data-jump="#sec-01"` (etc.) on major blocks so clicking a node smoothly jumps straight to that section (with a return-to-reading pill). Keep typography crisp—never draw cramped 30–40 node spiderwebs with microscopic text.
+2. **Parallel Side-by-Side / Dual-Track Comparison** *(default for comparing structurally different baselines vs. proposed method)*:
+   - When the baseline and proposed approach have different topologies (e.g., two legacy failure branches vs. one multi-stage proposed pipeline), draw them **simultaneously in parallel upper/lower or left/right tracks** so readers contrast them in one glance with zero clicks and full print fidelity.
+3. **End-to-End Method / Data-Flow Pipeline** *(algorithms, ML architectures, signal processing, systems, Section 02)*:
+   - Annotate edges with **tensor shapes / data types / physical units**, attach **equation links**, and mark **bottlenecks or branches**.
+   - **High-leverage upgrade**: Attach `.fig-steps` + `.step-vals` so the worked concrete micro-example flows step-by-step right through the flowchart (also remains fully interactive inside Lightbox!).
+4. **Decision Tree / Experimental Protocol & Sample-Flow Diagram** *(adaptive control, state machines, experimental physics, clinical/empirical cohorts, large-scale benchmarks)*:
+   - Consolidate scattered `if/else` thresholds and escape branches onto an orthogonal routing tree, OR show cohort/dataset filtering → exclusion criteria (including footnotes) → experimental arms → final metric accounting.
+5. **Same-Coordinate View Toggle (`data-set-view`)** *(optional—ONLY for true same-coordinate or high-overlap diffs)*:
+   - Reserve interactive view toggling for cases where both views share identical coordinates or an identical architectural skeleton and overlaying them simultaneously would clutter the canvas (e.g., overlapping distributions/curves before vs. after a transform, absolute values vs. % delta on identical axes, or switching operating regimes on the same graph). Do NOT force a toggle when two diagrams have completely different layouts and read better in parallel!
 
 ### Vector SVG Craft Rules
 1. **Zero text/line collisions**: Keep ≥32–44px horizontal gaps between stage boxes; route feedback tracks cleanly above/below boxes; use crisp Unicode subscripts (`xₜ`, `yₜ`, `Iₙ₋₁`, `x̂ₜ`) inside `<text>` because KaTeX ignores `<svg>`.
 2. **Target-language consistency**: In Chinese monographs, every diagram header, stage title, and branch label must be in Simplified Chinese (keeping standard English acronyms and math variables).
-3. **No duplicate overview diagrams**: Keep an Executive Summary visual focused on *problem vs. solution intuition* (or Before/After toggle), and Section 02's flowchart focused on *formula-level data flow and worked-example stepping*.
+3. **Clear granularity separation**: Keep the top-of-article visual focused on the **whole-paper logic panorama** (bird's-eye arc or taxonomy), and Section 02's diagram focused on **formula-level data flow, internal mechanics, and worked-example stepping**—never duplicate the same overview twice.
 
 ---
 
@@ -85,8 +89,8 @@ Opens on the **complete final state (`N / N`)** for instant readability and prin
 - Use `class="step-only" data-step="2"` for transient callout badges or active state rings visible **only** on listed step(s).
 - Keep `data-flow` proportional particles to **at most 1 key data-flow figure per page** so the page remains calm.
 
-### 3.2 Same-Coordinate View Switch / Before-After Toggle (`data-set-view`)
-Switch between baseline vs. proposed mechanism (or absolute vs. % gain views) inside one `.fig-frame`:
+### 3.2 Optional Same-Coordinate View Toggle (`data-set-view`)
+Use **only** when two views share identical coordinates or an identical architectural skeleton and overlaying them would clutter the canvas (for structurally different baseline vs. proposed flows, prefer a parallel dual-track diagram instead). Lightbox automatically preserves the toggle while zoomed!
 
 ```html
 <figure class="fig-frame" id="fig-diff" data-view="after" data-lightbox-title="图 1 · 传统基线与本文机制对照">
@@ -124,27 +128,52 @@ Add `data-interactive` to any clean benchmark/results `<table>` inside `.table-w
 - Automatically skips sorting on tables with `rowspan`/`colspan` or `< 5` data rows so merged academic headers are never scrambled.
 - Keep `.explorer-card` only when a paper truly needs multi-tab dataset/method switching across separate sub-tables.
 
-### 3.5 Progressive Disclosure Drawers (`<details class="deep-dive">`) & Cross-References (`<a class="xref">`)
-- Wrap lengthy algebraic derivations, secondary ablations, or verbatim English quotes in:
+### 3.5 Progressive Disclosure Drawers (`<details class="deep-dive">`), On-Demand Equation Notes (`.eq-note`) & Cross-References (`<a class="xref">`, `data-jump`)
+- Wrap lengthy algebraic derivations, secondary ablations, or verbatim quotes in:
   ```html
   <details class="deep-dive">
-    <summary>展开推导细节：Levinson–Durbin 递推复杂度证明 <span class="pill">O(p²)</span></summary>
+    <summary>展开推导细节：递推复杂度与收敛边界 <span class="pill">推导</span></summary>
     <div class="deep-dive-body">...</div>
   </details>
   ```
   All `<details>` auto-expand on `Ctrl+P` print and restore afterward.
-- Give figures (`id="fig-1"`), equations (`id="eq-1"`), and tables (`id="tab-1"`) stable IDs, and cite them with `<a class="xref" href="#fig-1">图 1</a>`. Clicking smooth-scrolls, pulses the target card, and pops a transient `↩ 返回阅读处` button.
+- Inside `.eq-box`, add an optional `<div class="eq-note">` (1–3 concise lines separated by a dashed hairline) **only when** a core formula introduces local symbols, non-obvious operators, or key structural terms whose role isn't obvious at a glance; skip `.eq-note` for simple formulas already clear in prose.
+- Give figures (`id="fig-1"`), equations (`id="eq-1"`), and tables (`id="tab-1"`) stable IDs, and cite them with `<a class="xref" href="#fig-1">图 1</a>`. Inside overview flowcharts or mind maps, add `data-jump="#sec-02"` on any SVG `<g>` node so clicking smoothly jumps to that section with a transient `↩ 返回阅读处` pill.
 
 ### 3.6 Optional Live Formula / Parameter Explorer (`.live-card`)
 Use **only** when the paper provides an explicit analytical equation or measured parameter grid (never invent speculative curves):
 - 1–3 `<input type="range">` controls inside `.live-controls`, one clean pure `update()` function updating an inline SVG chart/readout, mark the paper's measured default value, and clearly state the exact equation (or label simplified intuition models `"机理示意"`).
 
-### 3.7 Built-In Automatic Features (Zero Markup Needed)
+### 3.7 Built-In Automatic Features & Canonical Page Shell
+Always start `body.html` with this canonical shell so scroll-spy, collapsible `本篇图表` / `核心公式` drawers, reading progress, and right-margin marginalia attach cleanly:
+
+```html
+<div id="scroll-progress" aria-hidden="true"></div>
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-title"><span class="masthead-dot"></span><span>短标题</span></div>
+    <div class="masthead-meta"><span class="pill pill-teal">Venue Year</span></div>
+  </div>
+</header>
+<div class="page-shell">
+  <aside class="sidebar" aria-label="文章导航">
+    <nav class="toc-card">
+      <div class="toc-heading">Contents · 目录</div>
+      <ul class="toc-list" id="toc-list">
+        <li><a href="#sec-exec">核心导读</a></li>
+        <li><a href="#sec-01">01 · 研究背景</a></li>
+      </ul>
+    </nav>
+  </aside>
+  <main class="article-main">...</main>
+</div>
+```
+
 `assets/widgets.js` enables these automatically on every assembled monograph:
 - **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ restrained Midnight Slate Dark toggle (persisted via `localStorage`).
 - **Frameless Editorial Left Sidebar**: Clean borderless section outline rail with quiet collapsible `本篇图表` / `核心公式` drawers below (hidden when 0 equations), plus mini progress bar and estimated reading time.
 - **Zero-Clutter Marginalia & Exportable Notes**: Selecting any passage (including across inline `<code>` and KaTeX formulas) pops `✎ 批注 | ? 提问`; each `.fig-frame` gets a subtle `✎` icon (with inline `批注 / 疑问` switch). On wide screens (`≥ 1340px`), saved notes appear automatically as aligned right-margin marginalia linked to soft inline highlights (completely empty when 0 notes), while the Masthead `✎ 笔记 N` pill provides centralized review and one-click Markdown copy / `.md` download.
-- **120fps Vector Pan & Zoom Lightbox**: Works on every `.fig-frame` SVG or `<img>` (including cropped original figures and view-switched panels).
+- **Interactive 120fps Vector Pan & Zoom Lightbox**: Works on every `.fig-frame` SVG or `<img>` (including cropped original figures), and **automatically mounts synced `.fig-steps` stepper controls (`←` / `→` / `Space` + step notes) and `data-set-view` Before/After toggles inside the Lightbox footer** so readers can step and flip views live without losing pan/zoom position.
 
 ---
 
