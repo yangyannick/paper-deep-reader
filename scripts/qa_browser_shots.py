@@ -6,6 +6,7 @@ Usage:
 """
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,7 +41,12 @@ def main() -> None:
     ap.add_argument("--width", type=int, default=1440, help="Viewport width (default: 1440).")
     ap.add_argument("--max-height", type=int, default=14500, help="Capture canvas height (default: 14500).")
     ap.add_argument("--slice-height", type=int, default=1600, help="Per-slice height in px (default: 1600).")
-    ap.add_argument("--wait-ms", type=int, default=10000, help="Virtual time budget in ms (default: 10000).")
+    ap.add_argument("--wait-ms", type=int, default=15000, help="Virtual time budget in ms (default: 15000).")
+    ap.add_argument(
+        "--skip-katex-check",
+        action="store_true",
+        help="Skip headless DOM check for KaTeX CDN load status.",
+    )
     args = ap.parse_args()
 
     browser = find_browser()
@@ -64,7 +70,7 @@ def main() -> None:
         f"--screenshot={full_png}",
         url,
     ]
-    res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=75)
     if res.returncode != 0 or not full_png.exists():
         print(f"QA_BROWSER_FAILED (exit={res.returncode}): {res.stderr[:400]}")
         sys.exit(1)
@@ -82,7 +88,37 @@ def main() -> None:
         crop.save(out_p)
         saved += 1
 
-    print(f"QA_BROWSER_OK | browser={os.path.basename(browser)} | slices={saved} -> {out_dir}")
+    katex_note = ""
+    if not args.skip_katex_check:
+        src_txt = html_path.read_text(encoding="utf-8", errors="ignore")
+        prose_only = re.sub(
+            r"<script\b.*?</script>|<style\b.*?</style>|<svg\b.*?</svg>|<pre\b.*?</pre>|<code\b.*?</code>",
+            "",
+            src_txt,
+            flags=re.S,
+        )
+        has_math = bool(re.search(r"\$\$[^$]+\$\$|\$[^$\n]+\$", prose_only))
+        if has_math:
+            dom_cmd = [
+                browser,
+                "--headless=new",
+                "--disable-gpu",
+                f"--virtual-time-budget={args.wait_ms}",
+                "--dump-dom",
+                url,
+            ]
+            try:
+                dom_res = subprocess.run(dom_cmd, capture_output=True, text=True, timeout=45, encoding="utf-8", errors="replace")
+                dom_txt = dom_res.stdout or ""
+                katex_spans = len(re.findall(r'class="katex"', dom_txt))
+                if katex_spans == 0:
+                    katex_note = " | WARN: KATEX_CDN_TIMEOUT (0 rendered spans — CDN likely stalled in headless mode; check network/proxy or increase --wait-ms before editing LaTeX)"
+                else:
+                    katex_note = f" | katex_spans={katex_spans}"
+            except Exception:
+                katex_note = " | katex_check=skipped"
+
+    print(f"QA_BROWSER_OK | browser={os.path.basename(browser)} | slices={saved}{katex_note} -> {out_dir}")
 
 
 if __name__ == "__main__":

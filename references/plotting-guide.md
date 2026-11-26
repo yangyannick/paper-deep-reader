@@ -1,6 +1,12 @@
 # Publication-Grade Matplotlib Plotting Guide
 
-Use Matplotlib (exporting vector `.svg` + preview `.png`) whenever empirical data involves signed divergences, dense multi-sample comparisons, paired scatter distributions, or scaling trends.
+Use Matplotlib (exporting vector `.svg` + preview `.png`) whenever empirical data is backed by explicit numbers in paper tables or prose—such as signed divergences, multi-sample comparisons, paired scatter distributions, ablations, or scaling trends.
+
+## 0. When to Redraw in Matplotlib vs. Crop Original Figures
+
+- **Redraw as Matplotlib vector SVG (default for numerical data)**: Whenever the paper provides explicit numbers in tables or prose, redraw them in one consolidated plotting script using `assets/morandi-academic.mplstyle` so typography, palette, and vector zoom harmonize across the whole page.
+- **Crop high-DPI original figure (`220–300 DPI` PNG via PyMuPDF)**: For photographs, micrographs, observational imagery, or dense multi-curve plots that have **no raw numeric table** in the paper, crop the original figure cleanly into `.fig-frame` (which still supports full-screen Lightbox zoom) instead of spending multiple rounds reverse-engineering PDF vector paths.
+- **Batch execution**: Put all Matplotlib figures for a paper into **one plotting script**, generate all `.png` + `.svg` pairs in a single run, and inspect all preview PNGs in parallel via `read_file`.
 
 ## 1. Styling & Palette Alignment
 

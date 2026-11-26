@@ -19,30 +19,31 @@ Use the exact shared tokens across HTML, custom SVGs, and Matplotlib plots so th
 
 ## 2. Precision Vector SVG Craft Rules
 
-1. **Draw the mechanism, not empty boxes**: Embed domain-specific mini visuals inside SVG cards—mini histograms showing gaps vs packed bins, bit-plane stacks, 2×2 causal pixel neighborhoods, tensor dimension blocks, or attention/routing paths.
+1. **Draw the mechanism, not empty boxes**: Embed domain-specific mini visuals inside SVG cards—distributions, experimental chains, state transitions, causal loops, spatial neighborhoods, tensor dimensions, or pipeline branches.
 2. **Zero text/line collisions**:
-   - Keep ≥26–40px horizontal arrow gaps between stage boxes so edge labels (`yₜ`, `标准码流`) never touch box borders.
-   - Route auxiliary/side-information dashed tracks cleanly below or above main boxes—never let a dashed path cut through a translucent label box.
-   - Use crisp Unicode subscripts/superscripts inside SVG `<text>` (`xₜ`, `yₜ`, `hᵗ`, `hᵗ⁺¹`, `Iₙ₋₁`, `x̂ₜ`) instead of raw ASCII LaTeX braces (`I_{n-1}`), because KaTeX ignores `<svg>` blocks.
-3. **Target language consistency**: For Chinese reports, every diagram title, stage header, and annotation must be in Simplified Chinese (preserving standard English acronyms like `JPEG-2000`, `LOCO-I`, `DWT` and math variables).
+   - Keep ≥26–40px horizontal arrow gaps between stage boxes so edge labels never touch box borders.
+   - Route auxiliary/feedback dashed tracks cleanly below or above main boxes—never let a dashed path cut through a translucent label box.
+   - Use crisp Unicode subscripts/superscripts inside SVG `<text>` (`xₜ`, `yₜ`, `hᵗ`, `Iₙ₋₁`, `x̂ₜ`) instead of raw ASCII LaTeX braces (`I_{n-1}`), because KaTeX ignores `<svg>` blocks.
+3. **Target language consistency**: For Chinese reports, every diagram title, stage header, and annotation must be in Simplified Chinese (preserving standard English acronyms and math variables).
 4. **No duplicate overview diagrams**: If a conceptual intuition figure appears under the Executive Summary, keep it focused on the *problem-vs-solution intuition*, while the Section 2 architecture SVG focuses on *exact formula-level branches and data paths*.
 5. **Interactive Prose-to-SVG Linking (`data-ref`)**:
    - Mark 3–6 key concepts in prose with `<span class="ref-term" data-ref="node-id">...</span>`.
    - Give the corresponding SVG `<g>` group `class="svg-node" data-ref-node="node-id"`. `assets/widgets.js` automatically dims non-matching nodes and highlights matching ones on hover/focus.
 
-## 3. Adaptive Interactive Components
+## 3. Adaptive Interactive Components (Strictly Optional & Content-Driven)
 
-Choose only the interactive components that genuinely clarify the paper:
+Treat `examples/` as a visual typography and palette reference—never as a mandatory widget template. Include an interactive component **only** when it makes the paper's core insight immediately clearer to a human reader; for papers where static figures, equations, and prose communicate best (many theory, survey, experimental, clinical, or social-science papers), **shipping zero custom interactive widgets beyond the built-in figure Lightbox is completely valid and preferred over forced interactivity**.
+
 - **Universal Fullscreen Pan/Zoom Lightbox (Always ON for every figure)**:
-  - Wrap every figure in `<figure class="fig-frame" data-lightbox-title="...">` with `<button class="btn-zoom" type="button" data-zoom-btn>⤢ 放大查看</button>` inside `.fig-actions` and class `fig-zoomable` on `.fig-svg-wrap` (or `img.fig-img`).
-  - `assets/widgets.js` automatically injects the full-screen Lightbox supporting cursor-anchored wheel zoom (`50%–500%`), pointer-captured drag panning, double-click zoom/reset, keyboard `+`/`-`/`0`/`ESC`, and two-stage 120fps GPU + debounced crisp vector re-rendering.
-- **Interactive Stepper Player + Custom Sandbox (Use for discrete algorithms, codecs, protocols, or state machines)**:
-  - Open on the completed final state (`N / N`); Play replays `1 / N → N / N`.
-  - Pair with a small custom-input sandbox so readers can test edge cases and see live metrics + lossless/invariant verification.
-- **Small Multiples `.sm-grid` (Use for 3–4 contrasting regimes, failure modes, or extreme exemplars)**:
+  - Wrap every figure in `<figure class="fig-frame" data-lightbox-title="...">` with `<button class="btn-zoom" type="button" data-zoom-btn>⤢ 放大查看</button>` (or `⤢ Zoom` for English pages) inside `.fig-actions` and class `fig-zoomable` on `.fig-svg-wrap` (or `img.fig-img`).
+  - `assets/widgets.js` automatically injects the full-screen Lightbox (auto-localized to Chinese or English via `<html lang>`) supporting cursor-anchored wheel zoom (`50%–500%`), pointer-captured drag panning, double-click zoom/reset, keyboard `+`/`-`/`0`/`ESC`, and two-stage 120fps GPU + debounced crisp vector re-rendering.
+- **Interactive Stepper Player or Custom Sandbox (Optional — use only when dynamic execution clarifies the mechanism)**:
+  - Open on a meaningful final state (`N / N`) so static snapshots and first-glance readers see the full picture; Play replays `1 / N → N / N`.
+  - Keep outputs visual and immediately intelligible to a human reader; avoid creating duplicate widgets that repeat the same demonstration or dumping unformatted machine-level text blobs just to fill a CSS grid.
+- **Small Multiples `.sm-grid` (Optional — use for 3–4 contrasting regimes, cohorts, failure modes, or exemplars)**:
   - Same mini SVG dimensions and visual scale across cards so differences pop immediately.
-- **Interactive Original Table Explorer `.explorer-card` (Use when tables have ≥10 rows or multiple methods/splits)**:
-  - Provide codec/metric tabs, group filter pills, live search box, right-aligned `tabular-nums`, and color-coded delta columns. Never put `$...$` inside dynamically generated `thead.innerHTML`; use HTML `<i>K</i>` / `<sub>` directly.
+- **Interactive Original Table Explorer `.explorer-card` (Optional — use when tables have ≥10 rows or multiple methods/splits)**:
+  - Provide method/metric tabs, group filter pills, live search box, right-aligned `tabular-nums`, and color-coded delta columns. Never put `$...$` inside dynamically generated `thead.innerHTML`; use HTML `<i>K</i>` / `<sub>` directly.
 
 ## 4. Layout & Performance Non-Negotiables
 

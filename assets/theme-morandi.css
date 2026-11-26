@@ -1,4 +1,4 @@
-/* paper-deep-reader: Warm Paper Morandi Academic Magazine Theme (v1.0)
+/* paper-deep-reader: Warm Paper Morandi Academic Magazine Theme (v1.1)
  * Zero external font blocking, zero blur-compositing GPU thrashing,
  * full-screen 120fps vector pan/zoom lightbox, responsive two-column shell.
  */
@@ -486,8 +486,10 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: #FAF7F2; }
 .num { text-align: right; font-family: var(--font-mono); font-size: 0.82rem; }
 .compact-table th { padding: 0.56rem 0.44rem; font-size: 0.78rem; }
-.compact-table td { padding: 0.46rem 0.44rem; font-size: 0.80rem; white-space: nowrap; }
-.compact-table td.num { font-size: 0.77rem; }
+.compact-table td { padding: 0.46rem 0.44rem; font-size: 0.80rem; white-space: normal; }
+.compact-table td.num { font-size: 0.77rem; white-space: nowrap; }
+.explorer-card .compact-table th,
+.explorer-card .compact-table td { white-space: nowrap; }
 .row-total {
   background: var(--teal-soft) !important;
   font-weight: 700;
@@ -596,7 +598,7 @@ tbody tr:hover { background: #FAF7F2; }
 .sandbox-input:focus { outline: none; border-color: var(--teal); background: #FFFFFF; }
 .sandbox-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 0.6rem;
   margin-bottom: 0.85rem;
 }
@@ -610,7 +612,7 @@ tbody tr:hover { background: #FAF7F2; }
 .sb-stat strong { font-family: var(--font-mono); font-size: 0.96rem; color: var(--ink); }
 .sandbox-streams {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.65rem;
   font-size: 0.82rem;
 }

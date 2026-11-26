@@ -10,7 +10,7 @@ description: >-
   for quick paper questions, brief summaries, or ordinary chat discussions.
 license: MIT
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
 ---
 
 # Paper Deep Reader (`paper-deep-reader`)
@@ -49,25 +49,25 @@ Read `references/academic-writing-guide.md` before drafting.
 
 ### Stage 3 · Adaptive Visual Layering & Interactive Assembly
 Read `references/diagram-and-layout-guide.md` and `references/plotting-guide.md` before generating figures.
-Do NOT hardcode figure counts or force irrelevant widgets—adapt components to the paper type:
+Do NOT hardcode figure counts, mirror `examples/` mechanically, or force unnecessary widgets—let the paper's discipline and content decide. Beyond the built-in figure zoom lightbox, **zero custom interactive widgets is completely valid** when crisp prose, equations, and static visuals tell the story best (e.g., theory, proofs, surveys, empirical/clinical/social-science studies).
 
-| Paper Archetype | Recommended Core Diagrams & Interactive Widgets |
+| Paper Archetype | Optional Diagrams & Interactive Components (Pick Only What Clarifies) |
 |---|---|
-| **Discrete Algorithm / Codec / State Machine** | Conceptual intuition SVG + Route comparison SVG + Decoupled architecture SVG (`data-ref` linked) + **Interactive Stepper Player & Custom Sandbox** + Quantitative plots + Interactive raw data table |
-| **Deep Learning / Architecture / Systems** | Conceptual overview SVG + Hierarchical pipeline SVG (`data-ref` linked) + Module close-up / Tensor-shape worked trace + **Small Multiples** (ablation or failure archetypes) + Quantitative scaling/comparison plots + Interactive benchmark table |
-| **Theory / Physics / Experimental Measurement** | Physical setup / mechanism SVG + Derivation & worked numerical calculation + **Small Multiples** (regime comparison) + Error-budget / scaling Matplotlib plots + Evidence boundary & regime-validity table |
+| **Discrete Algorithm / State Machine / Protocol** | Conceptual intuition SVG + Architecture/branch SVG (`data-ref` linked) + Optional Stepper Player or Sandbox (only if human-readable at a glance) + Quantitative plots + Optional filterable data table |
+| **Deep Learning / Architecture / Systems** | Conceptual overview SVG + Hierarchical pipeline SVG (`data-ref` linked) + Tensor/data-flow worked trace + Small Multiples (ablation or failure cases) + Quantitative scaling/comparison plots + Optional benchmark table |
+| **Theory / Physics / Experimental / Empirical Science** | Experimental setup or causal/physical mechanism SVG + Derivation & worked numerical example + Small Multiples (regime or cohort comparison) + Error-budget / quantitative plots + Scope & evidence-boundary table |
 
 Three orthogonal visual tracks (all aligned to the Warm Paper Morandi palette in `assets/theme-morandi.css` and `assets/morandi-academic.mplstyle`):
 1. **Conceptual Overview & Precision Mechanism Diagrams (Vector SVG default)**:
-   - Draw the actual mechanism (mini histograms, bit-planes, pixel neighborhoods, tensor dimensions, pipeline branches)—never empty labeled boxes.
+   - Draw the actual mechanism (distributions, pipelines, experimental setups, causal pathways, state transitions)—never empty labeled boxes.
    - Use **target-language labels** (e.g. 100% Simplified Chinese with standard English acronyms/symbols for Chinese reports); never insert an English-only concept graphic into a Chinese reading page.
    - Optional AI concept figure: Only if the environment has an image-generation tool and the user wants an AI conceptual anchor, generate at most 1 `paper-figure` image strictly matching the target language and Warm Paper Morandi palette, and visually inspect it for zero garbled text. On quota/error or garbled output, default cleanly to a crisp vector SVG.
-2. **Quantitative Statistical Charts (`assets/morandi-academic.mplstyle`, Matplotlib SVG)**:
-   - Use **dual-panel** layout only for concise, low-density comparisons (≤8 categories per panel).
-   - **Split dense charts (≥15 samples or dense annotated scatters) into separate full-width SVGs** so labels remain effortlessly legible inside the `860px` reading column.
-   - Mandatory visual QA: Render PNG previews, inspect every PNG via `read_file`, fix any text overlap/clipping/legend collision, then export vector SVGs (`svg.fonttype: none`).
+2. **Quantitative Statistical Charts (`assets/morandi-academic.mplstyle`, Matplotlib SVG) vs. Original Figure Crops**:
+   - Whenever quantitative comparisons are backed by explicit numbers in paper tables or prose, redraw them as publication-grade Matplotlib vector SVGs using **one consolidated plotting script** (batch generation), then visually inspect every rendered PNG in parallel via `read_file` before embedding.
+   - For photographs, micrographs, observational imagery, or dense continuous curves that have **no raw numeric table** in the paper, crop high-DPI (`220–300 DPI`) original figures directly from the PDF into `.fig-frame` instead of spending multiple rounds reverse-engineering PDF vector paths.
+   - Use **dual-panel** layout only for concise, low-density comparisons (≤8 categories per panel); **split dense charts (≥15 samples or dense annotated scatters) into separate full-width SVGs** so labels remain effortlessly legible inside the `860px` reading column.
 3. **Zero-Dependency Self-Contained Assembly**:
-   - Write the page body fragment (`body.html`) using the exact semantic classes from `assets/theme-morandi.css` (sticky masthead, clean left TOC sidebar only, Hero card + flush 4-KPI strip, Executive Summary, `.fig-frame` with `⤢ 放大查看` zoom buttons on every figure, `.eq-box`, `.table-wrap`, `.audit-grid` 2×2, `.transfer-grid`, `.sources-box`).
+   - Write the page body fragment (`body.html`) using semantic classes from `assets/theme-morandi.css` (sticky masthead, clean left TOC sidebar only, Hero card + flush 4-KPI strip, Executive Summary, `.fig-frame` with `⤢ 放大查看` zoom buttons on every figure, `.eq-box`, `.table-wrap`, `.audit-grid` 2×2, `.transfer-grid`, `.sources-box`). Treat interactive CSS blocks (`.player-*`, `.sandbox-*`, `.explorer-card`) as optional building blocks, not a mandatory checklist.
    - Run `scripts/assemble_html.py` to inline `assets/theme-morandi.css`, `assets/widgets.js` (rAF scroll/TOC sync, `data-ref` linked highlighting, 120fps GPU + debounced crisp vector Pan/Zoom Lightbox), cleaned/ID-prefixed SVGs, and any page-specific interactive JS into one standalone `.html` file.
    - **Performance guardrails**: Never add render-blocking Google Fonts `<link>` tags or `backdrop-filter: blur(...)`; keep `ignoredTags: ['script','noscript','style','textarea','pre','code','svg']` in KaTeX auto-render; escape `<` as `&lt;` inside KaTeX math.
 
