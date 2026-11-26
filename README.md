@@ -6,7 +6,7 @@
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-Claude_Code_%7C_Codex_%7C_Cursor_%7C_Antigravity-B86B52.svg)](#快速开始)
 [![Output](https://img.shields.io/badge/Output-Single--File_Interactive_HTML-5E8C61.svg)](#效果预览)
 
-一个面向科研论文深度精读的 Agent Skill。输入本地 PDF、arXiv、开放获取 DOI 或 Zotero 文献，生成单个可离线打开的交互式 HTML 精读长文——包含逐页视觉核对的公式与实验数据、矢量机制图、Matplotlib 统计图，以及支持滚轮缩放与拖拽平移的矢量图表灯箱。
+一个面向科研论文深度精读的 Agent Skill。输入本地 PDF、arXiv、开放获取 DOI 或 Zotero 文献，生成单个可离线打开的交互式 HTML 精读长文——集逐页视觉核对的公式与数据、结构化交互流程图与数值微例步进推演、Matplotlib 矢量统计图、符号速查浮卡、可排序筛选表格、本地划词批注导出与暖纸/深色双主题于一体。
 
 ---
 
@@ -28,10 +28,10 @@
 ## 核心特性
 
 - **逐页视觉核验，拒绝编造数据**：先用 PyMuPDF 将关键页渲染为 PNG 逐页核对公式、多栏表格与脚注，再动笔撰写，避免纯文本抽取错位。
-- **刊物级长文阅读体验**：采用暖纸低饱和配色、左侧悬浮目录、KaTeX 数学排版与零阻塞加载策略（无外链 Google Fonts、无拖帧毛玻璃），长文和复杂图表也能秒开顺滑滚动。
-- **按论文类型自适应生成可视化与交互**：离散算法类自动配步进状态机与交互沙盒，架构/系统类配联动高亮矢量图与对比卡片，数据密集型图表自动拆分为全宽 Matplotlib 矢量 SVG，所有图表内置滚轮缩放（50%–500%）与拖拽平移灯箱。
-- **有深度的方法剖析，无冗余标记**：正文保留完整的数值微算例、关键设计取舍与实验局限性分析，不堆砌 AI 套话或多余的校验角标。
-- **单文件便携交付，零硬依赖输入**：CSS、JS 与矢量 SVG 全部内联进单个 ~250 KB 的 `.html` 文件；支持本地 PDF、arXiv、开放获取 DOI 与 Zotero 7+ 本地文献库，无需强制安装额外 MCP 或插件。
+- **结构化流程图与零手写 JS 声明式交互引擎**：按论文类型绘制方法流水线、决策分支、实验样本流或同坐标 Before/After 对照图，内置步进推演（把数值微例直接跑在流程图上）、双向术语-图元联动高亮、公式符号悬停速查浮卡、声明式可排序/极值高亮/CSV 导出表格与折叠深度推导抽屉。
+- **学术刊物级沉浸式阅读工作台**：暖纸浅色 / 柔炭深色一键护眼切换（统计图自动做柔和降眩光适配）、字号调节、左侧「目录 / 图表 / 公式」三合一速跳、交叉引用跳转脉冲与「返回阅读处」胶囊、划词批注与图框提问本地持久化及 Markdown 一键导出、120fps 矢量图表缩放灯箱、纯净打印样式。
+- **严谨的统计图与方法剖析**：把每张图当作视觉论证，区分重绘矢量图与高清原图裁剪边界，杜绝连续堆图；正文给出完整数值微算例、组件作用层次与证据边界，不夹带 AI 套话或校验角标噪声。
+- **单文件便携交付，支持真·纯离线归档**：CSS、JS 与矢量 SVG 全部内联进单个 `.html` 文件，支持本地 PDF、arXiv、开放获取 DOI 与 Zotero 7+ 本地文献库，且 `assemble_html.py --offline-katex` 可将 WOFF2 精简版 KaTeX 一并内联实现 100% 断网渲染。
 
 ---
 
@@ -80,12 +80,12 @@ pip install -r requirements.txt
 
 **1. 本地 PDF（离散算法 / 编解码类论文）**
 ```text
-使用 $paper-deep-reader 深度精读 ./papers/pinho-2002.pdf，给出完整的小规模手算闭环算例、交互式步进演示器、自定义输入沙盒与可筛选的原始实验数据表。
+使用 $paper-deep-reader 深度精读 ./papers/pinho-2002.pdf，包含基线与本文机制对照切换、带数值微例的交互式步进流程图、符号速查与可筛选排序的原始实验数据表。
 ```
 
 **2. arXiv 或开放获取 DOI（深度学习 / 架构类论文）**
 ```text
-使用 $paper-deep-reader 精读 arXiv:2312.00752（Mamba），重点绘制带高亮联动的层级架构图、张量维度推演、消融对比小多图和序列长度扩展曲线。
+使用 $paper-deep-reader 精读 arXiv:2312.00752（Mamba），重点绘制带高亮联动的层级数据流程图、张量维度推演、消融对比小多图和序列长度扩展曲线。
 ```
 ```text
 使用 $paper-deep-reader 精读 DOI 10.1038/s41586-021-03819-2。
@@ -101,9 +101,9 @@ pip install -r requirements.txt
 使用 $paper-deep-reader 精读 ./papers/bitshuffle-2015.pdf，在最后结合我的研究方向（16-bit 高速科学采集数据流的实时无损压缩）分析可迁移点、内存开销与失效边界。
 ```
 
-**5. 输出全英文精读页面**
+**5. 输出全英文或 100% 离线归档版**
 ```text
-Use $paper-deep-reader on arXiv:1706.03762 and write the entire standalone interactive HTML monograph in English.
+Use $paper-deep-reader on arXiv:1706.03762 and write the entire standalone interactive HTML monograph in English with --offline-katex enabled.
 ```
 
 ### 独立运行内置脚本（CLI）
@@ -117,10 +117,13 @@ python scripts/fetch_paper.py --zotero-query "sparse histograms" --out ./temp/de
 # 2. 提取全文并渲染 200 DPI 核验页图
 python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo --pages 1-6 --dpi 200
 
-# 3. 对生成的 HTML 运行静态检查（KaTeX、重复 ID、JS 语法、禁用套话）
+# 3. 组装单文件 HTML（可选 --offline-katex 内联精简 WOFF2 字体实现完全断网查看）
+python scripts/assemble_html.py --title "Demo" --body ./temp/demo/body.html --out ./temp/demo/out.html --offline-katex
+
+# 4. 对生成的 HTML 运行静态检查（KaTeX、重复 ID、步进/视图绑定、JS 语法、禁用套话）
 python scripts/qa_static.py examples/pinho-2002-demo.html --strict-cliches
 
-# 4. 捕获 1440px 浏览器截图切片进行视觉审查
+# 5. 捕获 1440px 浏览器截图切片进行视觉审查
 python scripts/qa_browser_shots.py --html examples/pinho-2002-demo.html --out ./temp/demo/qa_shots
 ```
 
@@ -128,27 +131,27 @@ python scripts/qa_browser_shots.py --html examples/pinho-2002-demo.html --out ./
 
 ## 工作流与目录结构
 
-整体按四步推进：**① 源文献落地与逐页视觉核对** → **② 学术长文撰写与算例/边界核查** → **③ 矢量图绘制、统计图自检与单文件组装** → **④ 静态与 1440px 浏览器双层质检**。
+整体按四步推进：**① 源文献落地与逐页视觉核对** → **② 学术长文撰写与算例/边界核查** → **③ 结构化交互流程图、统计图视觉自检与单文件组装** → **④ 静态与 1440px 浏览器双层质检**。
 
 ```text
 paper-deep-reader/
-├── SKILL.md                           # 完整工作流、输入源适配与按论文类型选型规范
+├── SKILL.md                           # 完整工作流、输入源适配、流程图与声明式交互选型
 ├── agents/
 │   └── openai.yaml                    # Codex 显式调用配置
 ├── assets/
-│   ├── theme-morandi.css              # 暖纸莫兰迪排版样式表与灯箱样式
-│   ├── widgets.js                     # 目录联动、术语-SVG 高亮、中英自适应矢量灯箱
+│   ├── theme-morandi.css              # 暖纸浅色/柔炭深色双主题、交互组件与纯净打印样式
+│   ├── widgets.js                     # 声明式步进/视图切换/双向联动/符号卡/表格/批注/灯箱引擎
 │   └── morandi-academic.mplstyle      # 配色统一的 Matplotlib 学术样式
 ├── references/
-│   ├── academic-writing-guide.md      # 叙事结构、手算算例与证据边界规范
-│   ├── diagram-and-layout-guide.md    # 矢量机制图工艺与交互组件指南
-│   └── plotting-guide.md              # 全宽/双栏拆图规则与绘图视觉自检清单
+│   ├── academic-writing-guide.md      # 叙事结构、手算算例、图文节奏与证据边界规范
+│   ├── diagram-and-layout-guide.md    # 4 类流程图、声明式交互组件写法与暗色兼容规范
+│   └── plotting-guide.md              # 视觉论证优先、重绘 vs 裁剪边界与绘图自检清单
 ├── scripts/
 │   ├── fetch_paper.py                 # 零依赖拉取器（arXiv / OA DOI / PDF URL / Zotero 7+）
 │   ├── extract_pdf.py                 # PyMuPDF 文本提取与核验页 PNG 渲染
-│   ├── assemble_html.py               # 单文件 HTML 组装器（SVG 清理与 ID 隔离）
-│   ├── qa_static.py                   # 静态质检脚本（公式、ID、套话、node --check）
-│   └── qa_browser_shots.py            # 跨平台无头浏览器 1440px 截图切片脚本
+│   ├── assemble_html.py               # 单文件 HTML 组装器（SVG 清理、ID 隔离与 --offline-katex）
+│   ├── qa_static.py                   # 静态质检脚本（公式、ID、交互绑定、套话、node --check）
+│   └── qa_browser_shots.py            # 跨平台无头浏览器 1440px 截图切片与 KaTeX DOM 检查
 ├── docs/images/                       # README 展示截图
 ├── examples/
 │   └── pinho-2002-demo.html           # 完整单文件 HTML 示例
@@ -167,14 +170,14 @@ paper-deep-reader/
 - **如何开启 Zotero 7+ 本地 API？**  
   打开 Zotero（7 / 8 / 9 / 10 通用）→ **设置 → 高级 → 常规** → 勾选「允许此计算机上的其他应用程序与 Zotero 通信」。脚本通过 `/file` 接口自动解析真实磁盘路径，即使你把 Zotero 数据目录迁到了 `D:\Zotero` 等自定义位置也无需额外传参。
 - **生成的 HTML 完全离线也能看吗？**  
-  样式、交互脚本、原始数据表与所有矢量图表均内联在单个 HTML 内，无外链字体或图床；仅数学公式排版按需加载 KaTeX CDN（离线时正文、表格与所有矢量图依然正常浏览）。
+  默认模式已将全部样式、交互引擎、原始数据表与矢量图表内联在单个 ~250 KB 文件内（仅公式排版走 KaTeX CDN）；若需在纯断网环境完整渲染公式，组装时附加 `--offline-katex` 即可自动缓存并内联 WOFF2 精简版 KaTeX。
 
 ---
 
 ## 致谢与开源协议
 
 本仓库全部模板、样式表、脚本与规范文档均基于 [MIT License](LICENSE) 从零编写，设计思路借鉴了开源社区的若干优秀实践：
-- 矢量机制图、高亮联动、步进播放器与小多图矩阵的交互理念受 [`visual-explainer`](https://github.com/nicobailon/visual-explainer)（MIT）启发；
+- 矢量机制图、高亮联动、步进回放、同坐标对照与划词批注交互理念受 [`visual-explainer`](https://github.com/nicobailon/visual-explainer)（MIT）启发；
 - 数值微算例、组件作用评估与证据边界审查受学术论文深度 X-ray 精读工作流启发；
-- 统计图“渲染—目视自检—修正”闭环受学术绘图工作流启发；
+- 统计图“视觉论证优先 + 渲染—目视自检—修正”闭环受学术绘图工作流启发；
 - 本地文献库联动兼容 Zotero 7+ Local API 与 [`zotero-mcp`](https://github.com/54yyyu/zotero-mcp)（MIT）。

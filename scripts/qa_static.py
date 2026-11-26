@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static quality-assurance checks for standalone paper-deep-reader HTML files.
+"""Static quality-assurance checks for standalone paper-deep-reader HTML files (v1.3.0).
 
 Checks:
   1. Unreplaced @@TOKEN@@ placeholders
@@ -7,7 +7,8 @@ Checks:
   3. Duplicate DOM/SVG IDs
   4. Forbidden QA-scaffold noise / AI-cliche strings / render-blocking Google Fonts
   5. Raw markdown backticks in prose
-  6. Inline JavaScript syntax verification via `node --check` (when Node.js is available)
+  6. Figure zoom-button integrity, consecutive stacked figures, declarative stepper/view-switch/symbol checks
+  7. Inline JavaScript syntax verification via `node --check` (when Node.js is available)
 """
 import argparse
 import re
@@ -93,11 +94,27 @@ def main() -> None:
     if "`" in visible:
         warnings.append("Raw backtick (`) found in prose; use <code>...</code> instead.")
 
-    # 6b. Zoom-button integrity & consecutive stacked figures check
+    # 6b. Figure integrity, consecutive stacked figures, declarative steppers & view switches
     for idx, fm in enumerate(re.finditer(r"<figure\b[^>]*>.*?</figure>", text, flags=re.S), start=1):
         block = fm.group(0)
         if "data-zoom-btn" in block and not re.search(r"<svg\b|<img\b", block):
             errors.append(f"Figure #{idx} has data-zoom-btn but no zoomable <svg> or <img> inside.")
+        if re.search(r'\bfig-steps\b', block):
+            has_notes = bool(re.search(r'<ol\b[^>]*class="[^"]*\bsteps-notes\b[^"]*"[^>]*>.*?<li\b', block, flags=re.S))
+            has_steps = bool(re.search(r'\bdata-step="[^"]+"', block))
+            if not has_notes:
+                errors.append(f"Figure #{idx} uses .fig-steps but is missing <ol class=\"steps-notes\"><li>...</li></ol>.")
+            if not has_steps:
+                warnings.append(f"Figure #{idx} uses .fig-steps but has no [data-step] elements inside.")
+        view_btns = set(re.findall(r'data-set-view="([^"]+)"', block))
+        if view_btns:
+            view_panels = set()
+            for vp in re.findall(r'data-view-panel="([^"]+)"', block):
+                view_panels.update(vp.strip().split())
+            missing = sorted(view_btns - view_panels)
+            if missing:
+                errors.append(f"Figure #{idx} has data-set-view button(s) {missing} with no matching data-view-panel.")
+
     fig_parts = re.split(r"(<figure\b.*?</figure>)", text, flags=re.S)
     consec_figs = 0
     for i in range(1, len(fig_parts) - 2, 2):
@@ -109,11 +126,21 @@ def main() -> None:
             f"Found {consec_figs} back-to-back <figure> transition(s) with no bridging prose; add transition/analysis paragraphs."
         )
 
+    # 6c. Symbol hover integrity (data-sym should resolve to data-sym-def / data-sym-table or data-sym-tip)
+    sym_refs = set(re.findall(r'\bdata-sym="([^"]+)"', prose))
+    if sym_refs:
+        has_sym_table = bool(re.search(r'\bdata-sym-table\b|\bdata-sym-def=', text))
+        for tag_m in re.finditer(r'<[^>]*\bdata-sym="([^"]+)"[^>]*>', prose):
+            tag = tag_m.group(0)
+            if not has_sym_table and "data-sym-tip=" not in tag:
+                warnings.append(f"Symbol ref data-sym=\"{tag_m.group(1)}\" has no data-sym-table/data-sym-def or data-sym-tip.")
+                break
+
     # 7. Inline JS syntax via node --check
     scripts = re.findall(r"<script(?:\s+[^>]*)?>(.*?)</script>", text, flags=re.S)
     inline_js = [s for s in scripts if s.strip()]
     node_bin = shutil.which("node")
-    js_status = "skipped (node not found)"
+    js_status = "none" if not inline_js else "skipped (node not found)"
     if inline_js and node_bin:
         with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as tf:
             tf.write("\n;\n".join(inline_js))

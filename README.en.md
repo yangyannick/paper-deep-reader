@@ -6,7 +6,7 @@
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-Claude_Code_%7C_Codex_%7C_Cursor_%7C_Antigravity-B86B52.svg)](#quick-start)
 [![Output](https://img.shields.io/badge/Output-Single--File_Interactive_HTML-5E8C61.svg)](#live-preview)
 
-An Agent Skill for deep technical reading of research papers. Given a local PDF, arXiv ID, Open-Access DOI, or Zotero item, it generates a standalone, offline-ready interactive HTML monograph—combining page-by-page visually verified equations and tables, vector mechanism diagrams, Matplotlib charts, and a wheel-zoom / drag-pan vector lightbox.
+An Agent Skill for deep technical reading of research papers. Given a local PDF, arXiv ID, Open-Access DOI, or Zotero item, it generates a standalone, offline-ready interactive HTML monograph—combining page-by-page visually verified equations and tables, interactive flowcharts with worked-example steppers, publication-grade Matplotlib charts, symbol hover quick-cards, sortable data tables, local notes export, and Warm Light / Warm Dark themes.
 
 ---
 
@@ -28,10 +28,10 @@ Built from Pinho (2002), *IEEE Signal Processing Letters*, Vol. 9, No. 1, pp. 5�
 ## Core Features
 
 - **Page-by-page visual grounding**: Renders key PDF pages to PNGs via PyMuPDF and visually verifies equations, multi-column tables, and footnotes before drafting—avoiding raw text extraction errors and fabricated numbers.
-- **Journal-grade editorial reading**: Pairs a warm paper Morandi palette, sticky left TOC, and KaTeX math with zero render-blocking Google Fonts and zero blur-compositing overhead so multi-figure pages open fast and scroll smoothly.
-- **Paper-adaptive diagrams & vector zoom**: Matches discrete algorithms with step-by-step players and sandboxes, architectures with linked-highlight SVGs and comparison cards, and dense benchmarks with full-width Matplotlib vector SVGs—all backed by a cursor-anchored wheel-zoom (`50%–500%`) and drag-pan lightbox.
-- **Analytical depth without UI clutter**: Delivers concrete numerical micro-examples, key design trade-offs, and empirical scope boundaries in clear scholarly prose without AI clichés or noisy verification badges.
-- **Single-file delivery, zero hard dependencies**: Inlines all CSS, JS, and vector SVGs into one ~250 KB `.html` file; works with local PDFs, arXiv, Open-Access DOIs, and Zotero 7+ without requiring extra MCP servers or plugins.
+- **Structured flowcharts & zero-JS declarative interactivity**: Builds method pipelines, decision trees, experimental protocol flows, and same-coordinate Before/After diffs—backed by a built-in declarative engine for worked-example steppers, bidirectional prose↔SVG linked highlighting, auto-indexed symbol quick-cards, sortable/filterable/CSV-export tables, and collapsible deep-dive derivation drawers.
+- **Editorial reading workbench**: Includes Warm Paper Light ↔ Warm Charcoal Dark theme switching (with low-glare dark-mode chart plates), font-size controls, a 3-in-1 left sidebar (`Outline · Figures · Eqs` + reading time), cross-reference jump pulses with a return-to-reading pill, zero-clutter selection/figure notes with Markdown export, a 120fps pan/zoom vector lightbox, and clean `@media print` styling.
+- **Visual-argument charts & rigorous analysis**: Enforces visual-argument-first Matplotlib redraws vs. clean high-DPI original crops, prohibits stacked figure walls, and delivers worked numerical examples, component role hierarchies, and evidence boundaries without AI clichés or noisy QA badges.
+- **Single-file delivery & optional air-gapped KaTeX**: Bundles all CSS, JS, and vector SVGs into one `.html` file; works with local PDFs, arXiv, Open-Access DOIs, and Zotero 7+; pass `--offline-katex` to `assemble_html.py` to inline compact WOFF2-only KaTeX for 100% air-gapped rendering.
 
 ---
 
@@ -80,12 +80,12 @@ pip install -r requirements.txt
 
 **1. Local PDF (Algorithm / Compression / State-Machine Paper)**
 ```text
-Use $paper-deep-reader on ./papers/pinho-2002.pdf. Include a concrete numerical worked example, an interactive step-by-step player, a custom input sandbox, and a filterable original data table.
+Use $paper-deep-reader on ./papers/pinho-2002.pdf. Include a Before/After mechanism toggle, a step-by-step worked-example flowchart, symbol quick-cards, and a sortable/filterable original data table.
 ```
 
 **2. arXiv or Open-Access DOI (Deep Learning / Architecture Paper)**
 ```text
-Use $paper-deep-reader on arXiv:2312.00752 (Mamba). Focus on a linked-highlight architecture SVG, tensor-shape trace, ablation small multiples, and sequence-length scaling charts.
+Use $paper-deep-reader on arXiv:2312.00752 (Mamba). Focus on a linked-highlight data-flow diagram, tensor-shape stepping, ablation small multiples, and sequence-length scaling charts.
 ```
 ```text
 Use $paper-deep-reader to analyze DOI 10.1038/s41586-021-03819-2.
@@ -101,9 +101,9 @@ Use $paper-deep-reader to read "Online Preprocessing for Sparse Histograms" from
 Use $paper-deep-reader on ./papers/bitshuffle-2015.pdf. In the final section, evaluate how it transfers to 16-bit high-rate scientific DAQ streams, including memory overhead and failure boundaries.
 ```
 
-**5. Specify Output Language (English / Simplified Chinese)**
+**5. Full English or Air-Gapped Offline Archive**
 ```text
-Use $paper-deep-reader on arXiv:1706.03762 and write the entire standalone interactive HTML monograph in English.
+Use $paper-deep-reader on arXiv:1706.03762 and write the entire standalone interactive HTML monograph in English with --offline-katex enabled.
 ```
 
 ### Standalone CLI Utilities
@@ -117,10 +117,13 @@ python scripts/fetch_paper.py --zotero-query "sparse histograms" --out ./temp/de
 # 2. Extract full text & render 200 DPI verification page PNGs
 python scripts/extract_pdf.py --pdf ./temp/demo/arxiv_1706.03762.pdf --out ./temp/demo --pages 1-6 --dpi 200
 
-# 3. Run static QA on a generated HTML file (KaTeX, duplicate IDs, JS syntax, clichés)
+# 3. Assemble standalone HTML (add --offline-katex for 100% air-gapped WOFF2 KaTeX)
+python scripts/assemble_html.py --title "Demo" --body ./temp/demo/body.html --out ./temp/demo/out.html --offline-katex
+
+# 4. Run static QA on a generated HTML file (KaTeX, duplicate IDs, stepper/view bindings, JS syntax, clichés)
 python scripts/qa_static.py examples/pinho-2002-demo.html --strict-cliches
 
-# 4. Capture 1440px headless browser slices for visual inspection
+# 5. Capture 1440px headless browser slices for visual inspection
 python scripts/qa_browser_shots.py --html examples/pinho-2002-demo.html --out ./temp/demo/qa_shots
 ```
 
@@ -128,27 +131,27 @@ python scripts/qa_browser_shots.py --html examples/pinho-2002-demo.html --out ./
 
 ## Workflow & Repository Layout
 
-The skill runs in four stages: **1. Source grounding & page-by-page visual verification** → **2. Monograph synthesis with worked examples & scope audit** → **3. Vector diagrams, inspected Matplotlib plots & single-file assembly** → **4. Static + 1440px browser visual QA**.
+The skill runs in four stages: **1. Source grounding & page-by-page visual verification** → **2. Monograph synthesis with worked examples & scope audit** → **3. Structured interactive flowcharts, inspected Matplotlib plots & single-file assembly** → **4. Static + 1440px browser visual QA**.
 
 ```text
 paper-deep-reader/
-├── SKILL.md                           # 4-stage workflow, input adapters & paper-type adaptation
+├── SKILL.md                           # 4-stage workflow, input adapters & declarative visual stack
 ├── agents/
 │   └── openai.yaml                    # Explicit-invocation policy for Codex
 ├── assets/
-│   ├── theme-morandi.css              # Warm Paper Morandi stylesheet & lightbox CSS
-│   ├── widgets.js                     # TOC spy, prose-SVG linking, localized vector lightbox
+│   ├── theme-morandi.css              # Warm Paper Light / Warm Charcoal Dark theme, widgets & print CSS
+│   ├── widgets.js                     # Declarative stepper, view-switch, symbol cards, tables, notes & lightbox
 │   └── morandi-academic.mplstyle      # Harmonized Matplotlib academic style
 ├── references/
-│   ├── academic-writing-guide.md      # Narrative order, worked examples & evidence-audit rules
-│   ├── diagram-and-layout-guide.md    # Vector diagram craft & adaptive interactive widgets
-│   └── plotting-guide.md              # Full-width vs dual-panel rules & visual QA checklist
+│   ├── academic-writing-guide.md      # Narrative order, worked examples, figure pacing & scope audit
+│   ├── diagram-and-layout-guide.md    # 4 flowchart archetypes & declarative interactive component recipes
+│   └── plotting-guide.md              # Visual-argument plotting, redraw vs crop rules & QA checklist
 ├── scripts/
 │   ├── fetch_paper.py                 # Stdlib-only fetcher (arXiv / OA DOI / PDF URL / Zotero 7+)
 │   ├── extract_pdf.py                 # PyMuPDF text extraction & verification page renderer
-│   ├── assemble_html.py               # Single-file HTML bundler (SVG cleaner & ID prefixer)
-│   ├── qa_static.py                   # Static QA (KaTeX, IDs, clichés, node --check)
-│   └── qa_browser_shots.py            # Cross-platform 1440px headless visual QA slicer
+│   ├── assemble_html.py               # Single-file HTML bundler (SVG cleaner, ID prefixer, --offline-katex)
+│   ├── qa_static.py                   # Static QA (KaTeX, IDs, interactive bindings, clichés, node --check)
+│   └── qa_browser_shots.py            # Cross-platform 1440px headless visual QA slicer & KaTeX DOM check
 ├── docs/images/                       # README showcase screenshots
 ├── examples/
 │   └── pinho-2002-demo.html           # Complete standalone HTML demo
@@ -167,14 +170,14 @@ paper-deep-reader/
 - **How do I enable Zotero 7+ Local API?**  
   Open Zotero (7 / 8 / 9 / 10) → **Settings → Advanced → General** → enable *"Allow other applications on this computer to communicate with Zotero"*. The script resolves the actual disk path automatically via the `/file` endpoint, even when your Zotero data folder is stored in a custom location.
 - **Does the generated HTML work offline?**  
-  All CSS, JS, tables, and vector SVG figures are embedded in the single `.html` file with zero external fonts or image hosts. Only KaTeX is loaded from CDN for formula typesetting (prose, tables, and all vector figures still render offline).
+  By default all CSS, JS, tables, and vector SVG figures are embedded in one ~250 KB `.html` file (only KaTeX loads from CDN). Pass `--offline-katex` to `scripts/assemble_html.py` to inline compact WOFF2-only KaTeX for 100% air-gapped math rendering.
 
 ---
 
 ## Credits & License
 
 All templates, stylesheets, scripts, and guides in this repository are written from scratch under the [MIT License](LICENSE). The workflow draws inspiration from several open-source ideas:
-- Vector mechanism diagrams, linked highlighting, steppers, and small multiples inspired by [`visual-explainer`](https://github.com/nicobailon/visual-explainer) (MIT).
+- Vector mechanism diagrams, linked highlighting, steppers, Before/After diffs, and selection-note workflows inspired by [`visual-explainer`](https://github.com/nicobailon/visual-explainer) (MIT).
 - Worked micro-examples, component role analysis, and evidence-boundary checks inspired by academic paper X-ray workflows.
-- Render–inspect–revise Matplotlib quality loops inspired by academic plotting workflows.
+- Visual-argument-first render–inspect–revise Matplotlib loops inspired by academic plotting workflows.
 - Local library integration compatible with Zotero 7+ Local API and [`zotero-mcp`](https://github.com/54yyyu/zotero-mcp) (MIT).
