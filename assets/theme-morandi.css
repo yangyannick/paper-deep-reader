@@ -855,6 +855,30 @@ html[data-theme="dark"] .fig-frame img {
 .fig-steps path[pathLength="1"][data-step].is-on { stroke-dashoffset: 0; }
 .fig-steps .step-vals > [data-step] { display: none; opacity: 1; }
 .fig-steps .step-vals > [data-step].is-val-active { display: inline; opacity: 1; }
+/* Linked highlighting always overrides stepper rest states (including final step .is-still.is-now) */
+.fig-steps .svg-dimmed [data-step],
+.fig-steps .svg-dimmed [data-step].is-on,
+.fig-steps .svg-dimmed [data-step].is-now,
+.fig-steps .svg-dimmed .svg-node {
+  opacity: 0.26;
+  filter: none;
+}
+.fig-steps .svg-dimmed .svg-node.is-highlighted,
+.fig-steps .svg-dimmed [data-step].is-highlighted,
+.fig-steps .svg-dimmed [data-ref].is-highlighted,
+.fig-steps.is-still .svg-dimmed .svg-node.is-highlighted,
+.fig-steps.is-still .svg-dimmed [data-step].is-on.is-highlighted,
+.fig-steps.is-still .svg-dimmed [data-step].is-now.is-highlighted,
+.fig-steps.is-still .svg-dimmed [data-ref].is-highlighted {
+  opacity: 1;
+  filter: drop-shadow(0 0 7px rgba(38, 88, 103, 0.48));
+}
+html[data-theme="dark"] .svg-dimmed .svg-node.is-highlighted,
+html[data-theme="dark"] .svg-dimmed [data-ref].is-highlighted,
+html[data-theme="dark"] .fig-steps.is-still .svg-dimmed .svg-node.is-highlighted,
+html[data-theme="dark"] .fig-steps.is-still .svg-dimmed [data-step].is-now.is-highlighted {
+  filter: drop-shadow(0 0 8px rgba(122, 179, 196, 0.58));
+}
 .flow-route { fill: none; stroke: none; pointer-events: none; }
 .flow-dot { pointer-events: none; }
 .flow-dot.teal { fill: var(--teal); }
