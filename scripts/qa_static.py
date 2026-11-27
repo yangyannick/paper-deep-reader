@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static quality-assurance checks for standalone paper-deep-reader HTML files (v1.3.0).
+"""Static quality-assurance checks for standalone paper-deep-reader HTML files (v2.0.0).
 
 Checks:
   1. Unreplaced @@TOKEN@@ placeholders
@@ -9,8 +9,10 @@ Checks:
   5. Raw markdown backticks in prose
   6. Figure zoom-button integrity, consecutive stacked figures, declarative stepper/view-switch/symbol checks
   7. Inline JavaScript syntax verification via `node --check` (when Node.js is available)
+  8. Optional source figure/table coverage audit against `--inventory source_inventory.json` via `data-src`
 """
 import argparse
+import json
 import re
 import shutil
 import subprocess
@@ -40,10 +42,21 @@ AI_CLICHES = [
 ]
 
 
+def normalize_src_token(tok: str) -> str:
+    t = re.sub(r"[\s._-]+", "", tok.strip().lower())
+    t = re.sub(r"^(ed|s)?figure(?=[a-z]?\d+$)", r"\1fig", t)
+    t = re.sub(r"^(ed|s)?table(?=[a-z]?\d+$)", r"\1tab", t)
+    return t
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run static QA on a paper-deep-reader HTML output.")
     ap.add_argument("html", help="Path to standalone HTML file.")
     ap.add_argument("--strict-cliches", action="store_true", help="Fail on AI-cliche warnings too.")
+    ap.add_argument(
+        "--inventory",
+        help="Optional path to source_inventory.json from extract_pdf.py to audit data-src coverage (WARN only).",
+    )
     args = ap.parse_args()
 
     html_path = Path(args.html).expanduser().resolve()
@@ -153,6 +166,43 @@ def main() -> None:
     if re.search(r'class="[^"]*\bsidebar\b[^"]*"', dom_only) and not re.search(r'id="toc-list"|class="[^"]*\btoc-list\b[^"]*"', dom_only):
         warnings.append("Sidebar found without #toc-list / .toc-list; collapsible figure/equation drawers will not attach.")
 
+    # 6e. Optional source coverage audit against source_inventory.json (WARN only)
+    cov_status = ""
+    if args.inventory:
+        inv_path = Path(args.inventory).expanduser().resolve()
+        if not inv_path.exists():
+            warnings.append(f"Inventory file not found: {inv_path}")
+        else:
+            inv = json.loads(inv_path.read_text(encoding="utf-8"))
+            expected_ids = [
+                normalize_src_token(it["id"])
+                for it in (inv.get("figures", []) + inv.get("tables", []))
+                if it.get("id")
+            ]
+            expected_set = set(expected_ids)
+            found_src = set()
+            for raw_attr in re.findall(r'\bdata-src="([^"]+)"', dom_only):
+                for tok in re.split(r"[\s,]+", raw_attr.strip()):
+                    if tok:
+                        found_src.add(normalize_src_token(tok))
+            missing = [cid for cid in expected_ids if cid not in found_src]
+            unknown = sorted(
+                cid
+                for cid in found_src
+                if cid not in expected_set and re.fullmatch(r"(?:ed|s)?(?:fig|tab)[a-z]?\d+", cid)
+            )
+            covered = len(expected_ids) - len(missing)
+            cov_status = f" | Coverage: {covered}/{len(expected_ids)}"
+            if missing:
+                warnings.append(
+                    f"Source coverage — {', '.join(missing)} not accounted for via data-src "
+                    f"(add missing items or verify false positive in {inv_path.name})."
+                )
+            if unknown:
+                warnings.append(
+                    f"Source coverage — data-src reference(s) not in {inv_path.name}: {', '.join(unknown)}."
+                )
+
     # 7. Inline JS syntax via node --check
     scripts = re.findall(r"<script(?:\s+[^>]*)?>(.*?)</script>", text, flags=re.S)
     inline_js = [s for s in scripts if s.strip()]
@@ -174,7 +224,7 @@ def main() -> None:
 
     print(
         f"FILE: {html_path.name} ({len(text.encode('utf-8')):,} B) | "
-        f"Math: {len(disp)} display + {len(inl)} inline | IDs: {len(all_ids)} | JS: {js_status}"
+        f"Math: {len(disp)} display + {len(inl)} inline | IDs: {len(all_ids)} | JS: {js_status}{cov_status}"
     )
     for w in warnings:
         print(f"  WARN: {w}")

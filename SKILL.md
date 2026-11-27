@@ -7,104 +7,93 @@ description: >-
   for an interactive HTML paper deep-reading page; do not auto-trigger for quick Q&A or summaries.
 license: MIT
 metadata:
-  version: "1.5.0"
+  version: "2.0.0"
 ---
 
 # Paper Deep Reader (`paper-deep-reader`)
 
-Produce a publication-grade, single-file interactive HTML deep-reading monograph from a research paper PDF. The output combines the calm editorial readability of an academic journal, the analytical rigor of a peer-level close reading, structured flowcharts, and a zero-dependency declarative interactive toolkit.
+Turn a research paper PDF into a standalone, interactive HTML monograph that **fully replaces reading the source PDF** while being **far clearer to understand**.
+
+**North-Star Principle — Source Layer vs. Reading-Aid Layer**:
+- **Source Layer (replaceability)**: Every section, core definition/theorem, numbered equation, figure, table, appendix, and substantive footnote is faithfully accounted for with traceable original numbering (secondary bulk may fold into `<details class="deep-dive">`, never silently dropped).
+- **Reading-Aid Layer (clarity)**: Every added overview, diagram, breakdown, walkthrough, symbol table, or interactive widget exists solely to remove a concrete comprehension obstacle in the paper.
+
+*(Detailed rules live once in `references/`: read `academic-writing-guide.md` before drafting, and `diagram-and-layout-guide.md` + `plotting-guide.md` before creating figures or interactivity.)*
+
+---
 
 ## Input Adapters (Zero Hard Dependencies)
 
-Resolve the source paper using the lightest available input path:
-1. **Local PDF path (default, zero extra setup)**: Read the user-supplied `.pdf` directly.
-2. **Built-in zero-dependency fetcher (`scripts/fetch_paper.py`, Python stdlib only)**:
-   - **arXiv ID / URL**: `python scripts/fetch_paper.py --source 1706.03762 --out <workdir>` — fetches arXiv metadata and downloads the PDF automatically.
-   - **DOI (Open Access)**: `python scripts/fetch_paper.py --source 10.xxxx/... --out <workdir>` — retrieves authoritative Crossref metadata and searches legal Open-Access PDFs (OpenAlex, Europe PMC, Semantic Scholar, optional Unpaywall via `--email`/`UNPAYWALL_EMAIL`, Crossref links). If the paper is paywalled with no legal OA PDF, the script saves `paper_meta.json` and exits with code `2` (`PAYWALL_OR_NO_OA_PDF`): **stop and ask the user for a local PDF or Zotero item**—never fabricate formulas/tables from an abstract alone and never use unauthorized download sources.
-   - **Zotero 7+ Local API (zero-plugin)**: `python scripts/fetch_paper.py --zotero-query "<title>" --out <workdir>` (or `--zotero-key <KEY>`) queries `127.0.0.1:23119` (compatible with Zotero 7 / 8 / 9 / 10) and automatically resolves the local PDF path via `/file` (even for custom data directories) alongside metadata and notes.
-3. **Optional `zotero-cli` / `zotero-mcp` / paper-search MCP**: If already installed in the host environment, you may use them directly to retrieve metadata, notes, and local PDF paths.
+Resolve the source paper via the lightest path, and **prefer the most complete edition** when multiple versions exist (e.g., an arXiv extended preprint with appendices over a truncated proceedings version; record the exact edition in `.sources-box`):
 
-Always put intermediate files (extracted text, PDF page PNGs, plotting scripts, QA screenshots) in a dedicated temporary task directory (respecting any workspace temp-directory rule such as `temp/<task>/`); never litter the repository root.
+1. **Local PDF path (default)**: Read the user-supplied `.pdf` directly.
+2. **Built-in zero-dependency fetcher (`scripts/fetch_paper.py`, Python stdlib only)**:
+   - **arXiv ID / URL**: `python scripts/fetch_paper.py --source 1706.03762 --out <workdir>`
+   - **DOI (Open Access)**: `python scripts/fetch_paper.py --source 10.xxxx/... --out <workdir>` — retrieves Crossref metadata and searches legal OA PDFs (OpenAlex, Europe PMC, Semantic Scholar, optional Unpaywall via `--email`/`UNPAYWALL_EMAIL`). On paywalled papers (exit code `2`, `PAYWALL_OR_NO_OA_PDF`), **stop and ask the user for a local PDF or Zotero item**—never fabricate content from an abstract and never use unauthorized sources.
+   - **Zotero 7+ Local API**: `python scripts/fetch_paper.py --zotero-query "<title>" --out <workdir>` (or `--zotero-key <KEY>`) queries `127.0.0.1:23119` and resolves the local PDF path, metadata, and notes.
+3. **Optional MCP / CLI tools**: Use installed `zotero-cli`, `zotero-mcp`, or paper-search MCP directly when available.
+
+Store all intermediate files (extracted text, page PNGs, `reading_plan.md`, plotting scripts, QA screenshots) inside a dedicated temporary task directory (honoring workspace rules such as `temp/<task>/`); never litter the repository root.
 
 ---
 
 ## 4-Stage Workflow
 
-### Stage 1 · Source Grounding & Visual Fidelity Verification
-1. Verify once which Python executable has `pymupdf`, `matplotlib`, `numpy`, and `PIL`, then reuse that same interpreter for the entire run. Run `scripts/extract_pdf.py --pdf <paper.pdf> --out <workdir>` (defaults to `--pages all --dpi 150`), which extracts full text, writes `page_index.json`, prints a compact `PAGE_MAP`, and renders **every page** to PNG so no body prose, conclusion, footnote, or appendix is ever omitted. For un-redrawable original figures (photos/waveforms), use `--crop PAGE:x0,y0,x1,y1:filename` (`240 DPI`) instead of writing ad-hoc crop scripts.
-2. Visually inspect all body, conclusion, and appendix page PNGs in **one parallel batch** (or 2 batches for long papers) via `read_file` to verify every equation, symbol, table value, footnote, and figure caption. Only on long papers where `pdf_text.txt` confirms a page is **100% pure bibliography entries** (zero body prose, conclusions, footnotes, or appendix text) may you skip visually inspecting that pure-reference page; never read PNGs one by one.
-3. Run **one upfront numeric grounding script** right after reading the pages to cross-check table arithmetic, compute exact worked-example numbers (so you never rewrite `body.html` later to fix micro-example values), and detect bounding boxes for any original figures that require high-DPI cropping.
+### Stage 1 · Source Grounding & Reading Plan
+1. Verify once which Python interpreter has `pymupdf`, `matplotlib`, `numpy`, and `PIL`, then reuse it throughout. Run:
+   ```bash
+   python scripts/extract_pdf.py --pdf <paper.pdf> --out <workdir>
+   ```
+   This extracts `pdf_text.txt`, renders every page to `pdf_pages/page_NN.png` (`150 DPI`), prints `PAGE_MAP`, and writes `source_inventory.json` (`SOURCE_INVENTORY` listing detected source figures, tables, numbered equations, and appendix start page).
+2. Visually inspect all body, conclusion, and appendix page PNGs in **one parallel `read_file` batch** (or 2 batches for long papers) to verify every equation, symbol, table value, footnote, and figure. Only on long papers where `pdf_text.txt` confirms a page is **100% pure bibliography** may you skip inspecting that PNG; never read PNGs one by one.
+3. Run **one upfront Python grounding script** right after page inspection to cross-check table arithmetic, compute exact walkthrough values, and locate bounding boxes for original figure crops (`extract_pdf.py --crop PAGE:x0,y0,x1,y1:name.png`, `240 DPI`).
+4. Write `<workdir>/reading_plan.md` (internal only, never embedded in HTML; template in `references/academic-writing-guide.md` §1) locking the exact edition, 1-sentence thesis, 3–5 core takeaways, Hero 2–4 picks, terminology glossary, full source coverage map, and obstacle→aid plan.
 
-### Stage 2 · Academic Monograph Synthesis & Silent Deep-Audit
-Read `references/academic-writing-guide.md` before drafting.
-- **Narrative & Tone**: Write in clear, rigorous, fluent academic prose matching the user's language (default Simplified Chinese with exact English technical terms preserved). Follow a natural academic reading order (Hero & Executive Summary → Whole-Paper Panorama → Research Background & Problem → Method & Equations → Experimental Analysis with inline interactive tables → Design Analysis & Evidence Boundaries → Engineering Insights & Transfer), adapting sections naturally to each paper rather than forcing a separate raw-table dump section.
-- **Silent Deep-Audit Checklist** (apply rigorously in the background without polluting the UI with meta-QA badges):
-  1. **Design Trade-offs**: Pinpoint where prior methods fail, how the proposed mechanism resolves the failure, and what cost it accepts.
-  2. **Equations, On-Demand Dissection & Semantic Symbol Table**: Preserve the source paper's own equation numbering (use descriptive semantic labels—never fabricated `Eq. (1)` numbers—for unnumbered prose relations) and introduce every `.eq-box` smoothly in prose. Add a concise 1–3 line `.eq-note` inside `.eq-box` **only** when a core formula contains new local notation or non-obvious structural factors (never force a bloated boilerplate onto simple equations). Build a `<table data-sym-table>` covering both recurring cross-section quantities **and** key mathematical objects from core equations even if they appear once (excluding trivial indices and throwaway dummy variables), wired to `data-sym` hover quick-cards; carry at least one concrete small-scale worked example end-to-end.
-  3. **Component Role Hierarchy**: Distinguish indispensable core mechanisms from conditional gains, unablated choices, and prototype simplifications.
-  4. **Evidence Boundary Check**: Cross-check body claims against tables, figures, and footnotes (downplayed regressions, weighted-average skews, un-tabulated claims, sample truncations, unmeasured compute/memory overhead). Keep paper facts clearly separated from mechanism inferences through natural academic prose rather than noisy stamp badges.
+### Stage 2 · Synthesis & Drafting
+Read `references/academic-writing-guide.md` before drafting `body.html`.
+- Follow the 3-part flow (**Entry** → **Body** following the paper's own spine → **Closing**), tagging source figures/tables with `data-src="figN"` / `data-src="tabN"` and matching headings with `<span class="src-sec">§N</span>`.
+- Write `body.html` in **1 write** for short/medium papers, or **2–3 logical chunks** for long papers (avoid 10+ tiny incremental edits). Use the Native Class Quick-Reference in `references/diagram-and-layout-guide.md` §6 directly without spending turns reading `assets/theme-morandi.css`.
 
-### Stage 3 · Structured Flowcharts, Visual Layering & Declarative Interactivity
-Read `references/diagram-and-layout-guide.md` and `references/plotting-guide.md` before generating figures.
-Do NOT force heavy custom JS simulators where they don't fit—instead, leverage the **zero-JS declarative interactive engine** built into `assets/widgets.js` so every paper gets rich, calm, human-readable interactivity with minimal extra code.
-
-| Paper Archetype | Recommended Diagram + Declarative Interactive Stack (Pick What Clarifies) |
-|---|---|
-| **Algorithms / Systems / Signal & Data Processing** | Whole-paper logic panorama (`data-jump` clickable) + Parallel baseline-vs-proposed comparison (or `data-set-view` only for true same-coordinate diffs) + Method pipeline with worked-example stepper (`.fig-steps` + `.step-vals`) + Bidirectional `data-ref` + Symbol quick-cards (`data-sym`) + Quantitative plots + `<table data-interactive>` |
-| **Machine Learning / Architectures / Modeling** | Whole-paper logic panorama (`data-jump` clickable) + Hierarchical architecture/data-flow diagram with shapes & equation links (`.fig-steps` or `data-ref` linked) + Optional 1–3 slider `.live-card` (only if backed by an explicit formula or measured grid) + Small Multiples + Quantitative plots + `<table data-interactive>` |
-| **Experimental / Empirical / Physical / Biomedical Science** | Whole-paper causal or protocol panorama (`data-jump` clickable) + Experimental cohort/sample-filtering flow + Key derivation/error-budget analysis (tuck lengthy proofs into `<details class="deep-dive">`) + Symbol quick-cards (`data-sym`) + Quantitative plots / high-DPI original evidence crops + `<table data-interactive>` |
-| **Theory / Proof / Survey / Comparative Benchmarks** | Whole-paper hierarchical mind map / taxonomy tree OR Assumption→Lemma→Theorem dependency DAG (`data-jump` clickable) + Structured comparison matrices (`<table data-interactive>`) + Focused worked counterexamples/cases |
-
-Three orthogonal visual tracks (all aligned to the Warm Paper Morandi palette in `assets/theme-morandi.css` and `assets/morandi-academic.mplstyle`):
-1. **Structured Whole-Paper Maps & Precision Vector Diagrams (`class="diag-svg"`)**:
-   - Pair a **whole-paper logic panorama or structured mind map** right after Executive Summary (10–14 readable nodes connecting Problem → Design/Taxonomy → Findings → Boundaries, with clickable `data-jump="#sec-..."` anchors) with a zoomed-in **Section 02 mechanism/protocol diagram**—giving distinct bird's-eye vs. close-up granularity without duplication.
-   - For baseline-vs-proposed comparisons whose structures differ, default to **parallel simultaneous layout** (upper/lower or side-by-side tracks) rather than hiding half behind a toggle; reserve `data-set-view` toggles for true same-coordinate or high-overlap views.
-   - Draw real substance (shapes, units, equation links, thresholds, sample counts, worked-example values)—never empty labeled boxes. Ensure visual grouping and connectors faithfully reflect true logical topology (clear visual grouping for same-stage siblings; every arrow must express a real causal, sequential, or hierarchical link—never forced cross-links between unrelated nodes). Use `.diag-svg` helper classes (`.d-card`, `.d-teal`, `.d-sage`, `.d-terra`, `.d-ochre`, `.d-edge`, `.d-edge-hot`) so diagrams adapt cleanly to both Warm Light and Midnight Slate Dark modes.
-   - Use **target-language labels** (e.g., Simplified Chinese with standard English acronyms/symbols for Chinese reports).
-   - Wire declarative interactions right into the HTML/SVG with zero bespoke JS: `data-jump` clickable overview nodes, `.fig-steps` + `data-step` for step-by-step worked-example replay, optional `data-set-view`/`data-view-panel` for same-coordinate toggles, bidirectional `data-ref`/`data-ref-node` linking, `data-sym` hover quick-cards backed by `<table data-sym-table>`, `<details class="deep-dive">` for lengthy proofs/excerpts, `<a class="xref" href="#...">` for jump-and-return cross-references, and `<table data-interactive>` for sortable/filterable tables.
-   - Optional `.live-card` parameter slider (1–3 sliders): include **only** when grounded in an explicit analytical equation or measured parameter grid from the paper—never invent speculative curves.
-2. **Quantitative Statistical Charts (`assets/morandi-academic.mplstyle`, Matplotlib SVG) vs. Original Figure Crops**:
-   - Treat every chart as a **visual argument** defending one clear sentence. Whenever numbers exist in tables or prose—or when a small-N original plot uses poor scaling (e.g., linear axis flattening >10× baselines) or jarring default colors—redesign and redraw it as a Morandi vector SVG using **one consolidated plotting script**, then visually inspect every rendered PNG in parallel via `read_file`.
-   - Reserve high-DPI (`220–300 DPI`) original PDF crops strictly for genuinely un-redrawable evidence: photographs, micrographs, dense high-frequency raw waveforms, or 100+ point un-tabulated curves whose original rendering is already clean and legible.
-   - Use **dual-panel** layout only for concise, low-density comparisons (≤8 categories per panel); **split dense charts (≥15 samples or dense annotated scatters) into separate full-width SVGs** with bridging prose between figures—never stack multiple figures back-to-back without explanatory text.
-3. **Zero-Dependency Self-Contained Assembly**:
-   - Write the page body fragment (`body.html`) using semantic classes from `assets/theme-morandi.css`. `assets/widgets.js` automatically provides: Masthead Light/Dark theme (`Warm Paper` ↔ restrained `Midnight Slate`), font-size controls, and a pinnable draggable floating symbol sheet (`Σ 符号` / `📌 悬浮查看`), frameless left outline sidebar with collapsible `本篇插图` / `本篇表格` drawers and reading progress, bidirectional `data-ref` linking, automatic hover quick-cards on rendered KaTeX symbols (both `$$...$$` and `$...$`) backed by `<table data-sym-table>`, `.fig-steps` steppers & edge-only flow dots, `data-set-view` toggles, `<table data-interactive>` sorting/filtering/CSV (with `极值高亮` strictly honoring AI-declared `data-better="high"|"low"` columns), xref jump-back pill, 3-color 1-click inline highlighting plus cross-node/KaTeX-safe selection & figure notes rendered as aligned right-margin marginalia on wide screens (with filtered top-bar Markdown export), interactive 120fps vector Lightbox (preserving live `.fig-steps` stepping and `data-set-view` toggling while zoomed), and clean `@media print`.
-   - Run `scripts/assemble_html.py` directly using `@@TOKEN@@` placeholders in `body.html`—never write ad-hoc base64-inlining scripts or spend turns inspecting `assemble_html.py`:
-     ```bash
-     python scripts/assemble_html.py --title "..." --body workdir/body.html --out output/paper.html \
-       --svg SVG_PLOT1=workdir/plot1.svg --img IMG_FIG1=workdir/crops/fig1.png [--extra-js workdir/custom_widgets.js] [--offline-katex]
-     ```
-     (`--svg` cleans & prefixes SVG IDs and rounds float decimals; `--img` auto-optimizes large PNGs to sharp WebP/PNG and embeds `data:` URIs; `--offline-katex` caches and inlines WOFF2-only KaTeX once.)
-   - **Performance guardrails**: Never add render-blocking Google Fonts `<link>` tags or `backdrop-filter: blur(...)`; keep `ignoredTags: ['script','noscript','style','textarea','pre','code','svg']` in KaTeX auto-render; escape `<` as `&lt;` inside KaTeX math.
+### Stage 3 · Visuals, Figures & Interactivity
+Read `references/diagram-and-layout-guide.md` and `references/plotting-guide.md` before generating visuals.
+- Generate all Matplotlib vector SVGs + preview PNGs in **one consolidated plotting script**, inspect all preview PNGs in **one parallel `read_file` batch**, and apply at most 1 targeted `edit_file` polish pass.
+- Account for every source figure visibly (redraw data-backed charts, crop complex architectures / simple schematics / photos / waveforms / appendix visuals via `--crop`, add custom `.diag-svg` explainers where structural obstacles exist).
+- Reuse `assets/widgets.js` for all built-in infrastructure (TOC, Lightbox, interactive tables, KaTeX symbol cards, highlights/marginalia, `.fig-steps` steppers, `data-set-view`). Add bespoke `--extra-js` only when grounded in an explicit equation, model, or measured grid (or requested by the user), obeying the 3 UX laws in `references/diagram-and-layout-guide.md` §5.
+- Assemble the single-file HTML via `scripts/assemble_html.py` using `@@TOKEN@@` placeholders (never write ad-hoc base64 scripts or read `assemble_html.py` unless debugging):
+  ```bash
+  python scripts/assemble_html.py --title "..." --body <workdir>/body.html --out <output/paper.html> \
+    --svg SVG_PLOT1=<workdir>/plot1.svg --img IMG_FIG1=<workdir>/crops/fig1.png \
+    [--extra-js <workdir>/custom_widgets.js] [--offline-katex]
+  ```
 
 ### Stage 4 · Dual-Layer QA & Delivery
-1. **Single-Command Assembly + Short-Circuit Dual QA**: Chain `assemble_html.py` → `qa_static.py output/paper.html` → (only if static QA passes!) `qa_browser_shots.py --html output/paper.html --out workdir/qa_shots` in one shell command (`qa_browser_shots.py` runs an automated headless-Chrome DOM geometric audit—checking JS runtime errors, horizontal overflow, broken images, KaTeX errors, and `.diag-svg` text collisions/clipping/tiny labels—and auto-fits the full page height into `2500px`-tall `1440px` PNG slices in one pass). Fix every `FAIL` and reported geometric issue, inspect the slices in **one parallel `read_file` batch**, polish any visual issue, and re-verify once.
-2. **Deliver HTML only**: Output the standalone `.html` file without overwriting earlier versions (combine final `update_steps` with your final reply—avoid an extra empty turn). Do NOT export PDF unless the user explicitly asks for one.
+1. Chain assembly + static QA (with `--inventory`) + short-circuit headless-Chrome audit/screenshots in **one shell command**:
+   ```bash
+   python scripts/qa_static.py <output/paper.html> --inventory <workdir>/source_inventory.json && \
+   python scripts/qa_browser_shots.py --html <output/paper.html> --out <workdir>/qa_shots
+   ```
+   - Fix every `FAIL` and geometric audit issue (`qa_browser_shots.py` checks runtime errors, overflow, broken images, KaTeX errors, and `.diag-svg` text collisions/clipping, and auto-slices full page height into `2500px` PNGs).
+   - **Resolve every source-coverage `WARN`**: either add the missing source figure/table with `data-src` or verify in `source_inventory.json` that the flagged token was a heuristic false positive.
+   - Inspect all QA slices in **one parallel `read_file` batch**, perform at most 1 polish pass, and re-verify once.
+2. **Deliver standalone HTML only**: Never overwrite earlier versions, and never export PDF unless explicitly requested.
 
 ---
 
-## Execution Speed & Browser Performance Guardrails
+## Execution & Browser Performance Guardrails
 
-- **Single-agent unified execution (avoid subagent bloat & rework)**:
-  - Run the entire workflow cleanly in one main agent thread—do **not** spawn parallel subagents for prose, charts, or custom JS (subagents duplicate PDF/context reads and inflate token cost).
-  - Use the **Morandi Native Layout Class Quick-Reference** in `references/diagram-and-layout-guide.md` directly so every grid/card renders cleanly on the first pass without reading `assets/theme-morandi.css` or reworking layouts after QA.
-- **Reuse built-in infrastructure, keep custom widgets focused**:
-  - Do NOT re-implement generic plumbing already built into `assets/widgets.js` (TOC/scroll-spy, Lightbox zoom, standard sortable/filterable/CSV tables via `table[data-interactive]`, automatic KaTeX symbol hover & draggable floating sheet via `table[data-sym-table]`, 3-color highlights & margin notes, or basic `.fig-steps` / `data-set-view` toggling).
-  - You remain **fully encouraged** to craft bespoke, creative domain-specific interactive visuals via `--extra-js` whenever a paper's core mechanism genuinely benefits from one (e.g., visual byte-lane animations, attention/matrix explorers, physical phase/parameter probes, or interactive state-machine traces)—with no arbitrary line cap; just keep them focused and visually intuitive rather than sprawling mini web-apps or raw text/Hex dumps.
-- **Minimize turn count & rework without compressing analytical depth**:
-  - Inspect page PNGs in parallel batches without extra `ls` turns (`extract_pdf.py` already prints `PAGE_MAP` for `pdf_pages/page_01.png .. page_NN.png`), and do not spend turns reading `assets/theme-morandi.css` or `scripts/assemble_html.py` unless debugging;
-  - Consolidate table checks, worked-example calculations, and figure crop detection into **1 upfront Python script**;
-  - Generate all Matplotlib charts in **1 consolidated script** and crop only genuinely un-redrawable original figures (typically 0–3 crops); when polishing after preview inspection, apply **targeted `edit_file` tweaks** (never rewrite the entire plotting script from scratch) and keep to at most 1 polish pass;
-  - Write `body.html` in 1 write for short/medium papers, or 2–3 logical section chunks for long papers so deep analysis and worked examples are never truncated (avoid 10+ tiny incremental edits);
-  - Chain assembly + static QA + short-circuit browser audit/screenshot capture in 1 command.
-- **Prevent browser jank on dense figures**: For Matplotlib scatter/waveform plots with >500 points, pass `rasterized=True` on the dense data artist so axes/text stay sharp SVG while avoiding thousands of slow SVG DOM nodes; keep `data-flow` dots to at most 1 flowchart per page.
+- **Single-agent unified execution**: Run the entire workflow in one main agent thread—do **not** spawn parallel subagents for prose, charts, or JS (duplicating PDF reads bloats tokens and rework).
+- **Minimal turn overhead**: Batch PNG reads without `ls` turns (`extract_pdf.py` prints `PAGE_MAP` and `SOURCE_INVENTORY`); keep grounding, plotting, and QA-chaining consolidated.
+- **Browser rendering safety**:
+  - Zero render-blocking Google Fonts `<link>` tags and zero `backdrop-filter: blur(...)`;
+  - Keep `ignoredTags: ['script','noscript','style','textarea','pre','code','svg']` in KaTeX auto-render and escape `<` as `&lt;` inside math;
+  - Pass `rasterized=True` on Matplotlib artists with >500 scatter markers or >2,000 polyline vertices; keep `data-flow` particles to at most 1 flowchart per page.
 
 ---
 
 ## Anti-Patterns to Never Ship
 
-- **Background QA scaffold leaking into reader UI**: Never render a sidebar "核验口径" box, masthead "全量复核" badge, or repetitive `[原文核验事实]` / `校验通过` stamps across paragraphs and captions. Place a concise 1–2 line source/scope note in the bottom `.sources-box` only.
-- **Whiteboard gimmicks or AI clichés**: Never use gimmicky translated section headers ("赌注 / 解剖台 / 承重墙") or filler phrases ("值得注意的是 / 至关重要 / 深入探讨 / 奠定基石").
-- **Fabricated interactive widgets or empty box flowcharts**: Never invent fake curves for a slider when no formula/grid exists, and never draw boxes with only names and no data shapes, thresholds, or equation links.
-- **Cramped dense multi-panel plots or stacked figures**: Never squeeze two 20+ point charts side by side into an `800px` column, and never place two `<figure>` cards back-to-back without bridging prose.
-- **Unverified numbers**: Never copy a figure or table value from memory or noisy OCR without checking the rendered PDF page PNG.
+- **Silent source omissions**: Dropping a source figure, table, or appendix without accounting for it visibly on the page.
+- **Backstage QA noise or AI clichés**: Rendering "核验口径" / "全量复核" / `[原文核验事实]` / `校验通过` in reader UI, or filler/slang (`值得注意的是`, `至关重要`, `奠定了坚实基础`, `深入探讨`, `解剖台`, `承重墙`).
+- **Minor errata hijacking Entry**: Putting footnote nitpicks, minor ablations, or edition quirks into Hero or `.exec-summary` instead of Closing.
+- **Broken or fabricated interactivity**: Inventing speculative slider curves without a paper formula/grid, shipping controls that show no visible effect in their default state, or styling clickable toggles like static badges.
+- **Crowded visuals or unverified numbers**: Squeezing 15+ item plots into dual panels, stacking two `<figure>` blocks without bridging prose, or copying numbers from OCR/memory without checking rendered PDF PNGs.

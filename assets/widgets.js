@@ -1,4 +1,4 @@
-/* paper-deep-reader: Zero-Dependency Declarative Interactive Engine (v1.3.0)
+/* paper-deep-reader: Zero-Dependency Declarative Interactive Engine (v2.0.0)
  * 1. Quiet Masthead controls (Warm Light/Dark theme, font scale, print helper)
  * 2. rAF scroll progress + 3-in-1 Left Sidebar (TOC / Figures / Equations + progress)
  * 3. Bidirectional Prose <-> SVG linked highlighting (data-ref / data-ref-node)
@@ -30,6 +30,7 @@
         next: '下一步 ›',
         play: '▶ 逐步推演',
         pause: '❚❚ 暂停',
+        stepPreview: (k, n) => '预览 ' + k + ' / ' + n,
         symJump: '定位到符号表 ↗',
         symFloatBtn: 'Σ 符号',
         symFloatTitle: 'Σ 符号速查表（可拖动）',
@@ -97,6 +98,7 @@
         next: 'Next ›',
         play: '▶ Replay',
         pause: '❚❚ Pause',
+        stepPreview: (k, n) => 'Preview ' + k + ' / ' + n,
         symJump: 'Jump to symbol table ↗',
         symFloatBtn: 'Σ Symbols',
         symFloatTitle: 'Σ Symbol Reference (drag)',
@@ -1100,7 +1102,19 @@
       }).filter(v => v >= 0);
     }
 
-    function syncStepperDom(container, cur, stillMode, total) {
+    function getNonZeroSteps(el, total) {
+      const seen = new Set();
+      const out = [];
+      parseStepTokens(el, total).forEach(v => {
+        if (v >= 1 && v <= total && !seen.has(v)) {
+          seen.add(v);
+          out.push(v);
+        }
+      });
+      return out;
+    }
+
+    function syncNodes(container, cur, stillMode, total) {
       container.classList.toggle('is-still', !!stillMode);
       container.classList.toggle('is-full', cur === total);
       const sEls = Array.from(container.querySelectorAll('[data-step]'))
@@ -1117,6 +1131,9 @@
           el.classList.toggle('is-now', onNow);
         }
       });
+    }
+
+    function syncVals(container, cur, total) {
       container.querySelectorAll('.step-vals').forEach(grp => {
         const kids = Array.from(grp.querySelectorAll('[data-step]'));
         let best = null;
@@ -1128,6 +1145,11 @@
         });
         kids.forEach(kid => kid.classList.toggle('is-val-active', kid === best));
       });
+    }
+
+    function syncStepperDom(container, cur, stillMode, total) {
+      syncNodes(container, cur, stillMode, total);
+      syncVals(container, cur, total);
     }
 
     document.querySelectorAll('.fig-steps').forEach(root => {
@@ -1159,21 +1181,69 @@
       let idx = n - 1;
       let stillState = true;
       let timer = 0;
+      let previewIdx = null;
+      let hoverTimer = 0;
+      let leaveTimer = 0;
+
+      function clearPreviewTimers() {
+        if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = 0; }
+        if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = 0; }
+      }
 
       function emitState() {
+        const activeIdx = previewIdx !== null ? previewIdx : idx;
         root.dispatchEvent(new CustomEvent('pdr:step', {
-          detail: { step: idx + 1, index: idx, total: n, still: stillState, playing: !!timer },
+          detail: {
+            step: activeIdx + 1,
+            index: activeIdx,
+            committedIndex: idx,
+            total: n,
+            still: stillState,
+            playing: !!timer,
+            preview: previewIdx !== null,
+          },
         }));
       }
 
+      function renderNotesAndBadge() {
+        const isPrev = previewIdx !== null;
+        const activeIdx = isPrev ? previewIdx : idx;
+        root.classList.toggle('is-previewing', isPrev);
+        notes.forEach((li, j) => { li.hidden = j !== activeIdx; });
+        if (badge) {
+          badge.textContent = isPrev ? ui.stepPreview(activeIdx + 1, n) : ((idx + 1) + ' / ' + n);
+          badge.classList.toggle('is-preview', isPrev);
+        }
+      }
+
+      function clearPreview(silent) {
+        clearPreviewTimers();
+        if (previewIdx === null) return;
+        previewIdx = null;
+        syncVals(root, idx + 1, n);
+        renderNotesAndBadge();
+        if (!silent) emitState();
+      }
+
+      function preview(k) {
+        if (timer) return;
+        const target = Math.max(0, Math.min(n - 1, k));
+        if (previewIdx === target) return;
+        previewIdx = target;
+        syncVals(root, target + 1, n);
+        renderNotesAndBadge();
+        emitState();
+      }
+
       function show(k, stillMode) {
+        clearPreviewTimers();
+        previewIdx = null;
         idx = Math.max(0, Math.min(n - 1, k));
         stillState = !!stillMode;
         const cur = idx + 1;
         syncStepperDom(root, cur, stillState, n);
-        notes.forEach((li, j) => { li.hidden = j !== idx; });
+        renderNotesAndBadge();
         if (range) range.value = String(idx);
-        if (badge) badge.textContent = cur + ' / ' + n;
         emitState();
       }
 
@@ -1184,8 +1254,14 @@
         if (wasPlaying) emitState();
       }
 
+      function jump(k) {
+        stop();
+        show(k, false);
+      }
+
       function togglePlay() {
         if (timer) { stop(); return; }
+        clearPreview(true);
         if (idx === n - 1) show(0, false);
         if (playBtn) playBtn.textContent = ui.pause;
         timer = setInterval(() => {
@@ -1194,6 +1270,151 @@
         }, 2800);
         emitState();
       }
+
+      // Mark clickable/hoverable stage cards inside SVG (exclude .step-vals, .step-only, [data-jump], connector paths)
+      Array.from(root.querySelectorAll('svg [data-step]')).forEach(el => {
+        if (el.closest('.step-vals, .steps-notes, [data-jump]')) return;
+        if (el.hasAttribute('data-jump') || el.classList.contains('step-only')) return;
+        if (el.parentElement && el.parentElement.closest('.is-step-card')) return;
+        const isCard = el.classList.contains('svg-node')
+          || el.hasAttribute('data-ref-node')
+          || (el.tagName.toLowerCase() === 'g' && !!el.querySelector('rect, circle, ellipse, polygon'));
+        if (!isCard) return;
+        if (!getNonZeroSteps(el, n).length) return;
+        el.classList.add('is-step-card');
+        if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+        if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+      });
+
+      function bindStepCards(scopeEl, opts) {
+        if (!scopeEl) return () => {};
+        let activeCard = null;
+
+        function findCard(target) {
+          if (!target || !target.closest) return null;
+          const card = target.closest('.is-step-card');
+          if (!card || !scopeEl.contains(card)) return null;
+          if (card.hasAttribute('data-jump') || card.closest('[data-jump]')) return null;
+          return card;
+        }
+
+        function pickHoverStep(card) {
+          const steps = getNonZeroSteps(card, n);
+          if (!steps.length) return -1;
+          return steps.includes(idx + 1) ? (idx + 1) : steps[0];
+        }
+
+        function triggerCardJump(card) {
+          const steps = getNonZeroSteps(card, n);
+          if (!steps.length) return;
+          const curStep = idx + 1;
+          const pos = steps.indexOf(curStep);
+          const nextStep = (steps.length > 1 && pos >= 0) ? steps[(pos + 1) % steps.length] : steps[0];
+          jump(nextStep - 1);
+        }
+
+        function schedulePreview(card) {
+          if (timer || (opts && opts.isDragging && opts.isDragging())) return;
+          if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = 0; }
+          const targetStep = pickHoverStep(card);
+          if (targetStep < 1) return;
+          if (previewIdx !== null) {
+            if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = 0; }
+            preview(targetStep - 1);
+          } else {
+            if (hoverTimer) clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(() => {
+              hoverTimer = 0;
+              if (!timer && activeCard === card && !(opts && opts.isDragging && opts.isDragging())) {
+                const s = pickHoverStep(card);
+                if (s >= 1) preview(s - 1);
+              }
+            }, 120);
+          }
+        }
+
+        function scheduleLeave() {
+          if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = 0; }
+          activeCard = null;
+          if (previewIdx === null) return;
+          if (leaveTimer) clearTimeout(leaveTimer);
+          leaveTimer = setTimeout(() => {
+            leaveTimer = 0;
+            if (!activeCard) clearPreview();
+          }, 100);
+        }
+
+        const onMouseOver = (e) => {
+          const card = findCard(e.target);
+          if (!card || card === activeCard) return;
+          activeCard = card;
+          schedulePreview(card);
+        };
+        const onMouseOut = (e) => {
+          const card = findCard(e.target);
+          if (!card) return;
+          const next = findCard(e.relatedTarget);
+          if (next === card) return;
+          if (next) {
+            activeCard = next;
+            schedulePreview(next);
+            return;
+          }
+          scheduleLeave();
+        };
+        const onFocusIn = (e) => {
+          const card = findCard(e.target);
+          if (!card) return;
+          activeCard = card;
+          clearPreviewTimers();
+          if (!timer) {
+            const targetStep = pickHoverStep(card);
+            if (targetStep >= 1) preview(targetStep - 1);
+          }
+        };
+        const onFocusOut = (e) => {
+          const card = findCard(e.target);
+          if (!card) return;
+          const next = findCard(e.relatedTarget);
+          if (next) return;
+          activeCard = null;
+          clearPreview();
+        };
+        const onClick = (e) => {
+          const card = findCard(e.target);
+          if (!card) return;
+          if (opts && opts.wasDragged && opts.wasDragged()) return;
+          e.stopPropagation();
+          triggerCardJump(card);
+        };
+        const onKeyDown = (e) => {
+          const card = findCard(e.target);
+          if (!card) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerCardJump(card);
+          }
+        };
+
+        scopeEl.addEventListener('mouseover', onMouseOver);
+        scopeEl.addEventListener('mouseout', onMouseOut);
+        scopeEl.addEventListener('focusin', onFocusIn);
+        scopeEl.addEventListener('focusout', onFocusOut);
+        scopeEl.addEventListener('click', onClick);
+        scopeEl.addEventListener('keydown', onKeyDown);
+
+        return () => {
+          scopeEl.removeEventListener('mouseover', onMouseOver);
+          scopeEl.removeEventListener('mouseout', onMouseOut);
+          scopeEl.removeEventListener('focusin', onFocusIn);
+          scopeEl.removeEventListener('focusout', onFocusOut);
+          scopeEl.removeEventListener('click', onClick);
+          scopeEl.removeEventListener('keydown', onKeyDown);
+        };
+      }
+
+      root.querySelectorAll('svg').forEach(svg => bindStepCards(svg));
 
       bar.addEventListener('click', (e) => {
         const go = e.target.closest('[data-step-go]');
@@ -1215,18 +1436,27 @@
       root._pdrStepper = {
         count: n,
         getIndex: () => idx,
+        getActiveIndex: () => (previewIdx !== null ? previewIdx : idx),
+        isPreviewing: () => previewIdx !== null,
         isStill: () => stillState,
         isPlaying: () => !!timer,
         show,
+        jump,
+        preview,
+        clearPreview,
         go: (delta) => { stop(); show(idx + delta, false); },
         togglePlay,
         stop,
-        applyTo: (targetEl) => syncStepperDom(targetEl, idx + 1, stillState, n),
+        applyTo: (targetEl) => {
+          syncNodes(targetEl, idx + 1, stillState, n);
+          syncVals(targetEl, (previewIdx !== null ? previewIdx : idx) + 1, n);
+        },
+        bindStepCards,
         getNoteEl: (k) => notes[k] || null,
       };
 
       show(n - 1, true);
-      window.addEventListener('beforeprint', () => { stop(); show(n - 1, true); });
+      window.addEventListener('beforeprint', () => { clearPreview(true); stop(); show(n - 1, true); });
     });
 
     // Proportional Flow Dots (auto-layered behind node cards + pre-sampled LUT + 30fps cap)
@@ -2596,38 +2826,63 @@
         zoomAt(scale * factor, e.clientX - rect.left, e.clientY - rect.top);
       }, { passive: false });
 
+      let dragMoved = false;
+      let justDragged = false;
+      let capturedPointerId = null;
+
       stageEl.addEventListener('pointerdown', (e) => {
         if (e.button !== 0) return;
         dragging = true;
+        dragMoved = false;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
         dragStartTx = tx;
         dragStartTy = ty;
-        stageEl.classList.add('is-dragging');
-        stageEl.setPointerCapture(e.pointerId);
+        capturedPointerId = null;
       });
       stageEl.addEventListener('pointermove', (e) => {
         if (!dragging) return;
+        if (!dragMoved) {
+          if (Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY) <= 4) return;
+          dragMoved = true;
+          stageEl.classList.add('is-dragging');
+          if (stageEl.setPointerCapture) {
+            try { stageEl.setPointerCapture(e.pointerId); capturedPointerId = e.pointerId; } catch (_) {}
+          }
+          if (activeFrame && activeFrame._pdrStepper) activeFrame._pdrStepper.clearPreview();
+        }
         tx = dragStartTx + (e.clientX - dragStartX);
         ty = dragStartTy + (e.clientY - dragStartY);
         scheduleGpu();
       });
-      function endDrag(e) {
+      function endDrag() {
         if (!dragging) return;
+        const moved = dragMoved;
         dragging = false;
+        dragMoved = false;
         stageEl.classList.remove('is-dragging');
-        if (e && stageEl.hasPointerCapture && stageEl.hasPointerCapture(e.pointerId)) {
-          stageEl.releasePointerCapture(e.pointerId);
+        if (capturedPointerId !== null && stageEl.hasPointerCapture && stageEl.hasPointerCapture(capturedPointerId)) {
+          stageEl.releasePointerCapture(capturedPointerId);
+        }
+        capturedPointerId = null;
+        if (moved) {
+          justDragged = true;
+          setTimeout(() => { justDragged = false; }, 0);
         }
       }
       stageEl.addEventListener('pointerup', endDrag);
       stageEl.addEventListener('pointercancel', endDrag);
 
       stageEl.addEventListener('dblclick', (e) => {
+        if (e.target && e.target.closest && e.target.closest('.is-step-card')) return;
         const rect = stageEl.getBoundingClientRect();
         if (Math.abs(scale - 1.0) < 0.08) zoomAt(2.2, e.clientX - rect.left, e.clientY - rect.top);
         else fitToStage();
       });
+      stageEl._pdrDragState = {
+        isDragging: () => dragging && dragMoved,
+        wasDragged: () => justDragged,
+      };
       window.addEventListener('resize', () => {
         if (overlay && overlay.classList.contains('is-open')) fitToStage();
       }, { passive: true });
@@ -2783,20 +3038,27 @@
 
             const syncLbStep = () => {
               stepper.applyTo(canvasEl);
-              const idx = stepper.getIndex();
-              rng.value = String(idx);
-              bdg.textContent = (idx + 1) + ' / ' + stepper.count;
+              const isPrev = stepper.isPreviewing();
+              const activeIdx = stepper.getActiveIndex();
+              const committedIdx = stepper.getIndex();
+              rng.value = String(committedIdx);
+              bdg.textContent = isPrev ? ui.stepPreview(activeIdx + 1, stepper.count) : ((committedIdx + 1) + ' / ' + stepper.count);
+              bdg.classList.toggle('is-preview', isPrev);
               bPlay.textContent = stepper.isPlaying() ? ui.pause : ui.play;
+              noteBox.classList.toggle('is-preview', isPrev);
               noteBox.innerHTML = '';
-              const srcLi = stepper.getNoteEl(idx);
+              const srcLi = stepper.getNoteEl(activeIdx);
               if (srcLi) {
                 Array.from(srcLi.childNodes).forEach(node => noteBox.appendChild(node.cloneNode(true)));
               }
             };
             syncLbStep();
+            const unbindLbCards = stepper.bindStepCards(canvasEl, stageEl._pdrDragState);
             frame.addEventListener('pdr:step', syncLbStep);
             cleanups.push(() => {
+              unbindLbCards();
               frame.removeEventListener('pdr:step', syncLbStep);
+              stepper.clearPreview();
               stepper.stop();
             });
           }
@@ -2829,7 +3091,10 @@
       if (el.dataset.zoomBound) return;
       el.dataset.zoomBound = '1';
       el.style.cursor = 'zoom-in';
-      el.addEventListener('click', () => openFromFrame(el.closest('.fig-frame')));
+      el.addEventListener('click', (e) => {
+        if (e.target && e.target.closest && e.target.closest('.is-step-card, [data-jump]')) return;
+        openFromFrame(el.closest('.fig-frame'));
+      });
     });
   })();
 })();

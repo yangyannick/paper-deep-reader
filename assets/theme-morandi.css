@@ -1,4 +1,4 @@
-/* paper-deep-reader: Warm Paper Morandi Academic Magazine Theme (v1.3.0)
+/* paper-deep-reader: Warm Paper Morandi Academic Magazine Theme (v2.0.0)
  * Zero external font blocking, zero blur-compositing GPU thrashing,
  * Warm Paper light + Warm Charcoal dark modes, declarative stepper/view-switch/
  * symbol-card/table/deep-dive/notes/3-in-1 sidebar styles, 120fps lightbox & print CSS.
@@ -493,18 +493,18 @@ h1 {
 }
 .meta-item strong { color: var(--ink); font-weight: 600; }
 
-/* Flush 4-Column KPI Strip */
+/* Elastic Hero Highlight Strip (2–4 adaptive cells) */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   border-top: 1px solid var(--border);
   background: var(--surface-tint);
+  overflow: hidden;
 }
 .kpi-cell {
   padding: 1.05rem 1.15rem;
-  border-right: 1px solid var(--border);
+  box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border);
 }
-.kpi-cell:last-child { border-right: none; }
 .kpi-num {
   font-family: var(--font-serif);
   font-size: 1.56rem;
@@ -554,6 +554,18 @@ h1 {
   font-size: 0.95rem;
   line-height: 1.82;
 }
+.exec-summary ul {
+  margin: 0.62rem 0 0;
+  padding-left: 1.25rem;
+}
+.exec-summary li {
+  margin-bottom: 0.42rem;
+  font-size: 0.935rem;
+  line-height: 1.74;
+  color: var(--ink-body);
+}
+.exec-summary li:last-child { margin-bottom: 0; }
+.exec-summary li strong { color: var(--ink); }
 
 /* Sections & Typography */
 section, h3[id], .fig-frame[id], .eq-box[id], .table-wrap[id], tr[id] {
@@ -582,6 +594,15 @@ h2 {
   padding: 0.08rem 0.48rem;
   border-radius: 5px;
 }
+.src-sec {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--muted-light);
+  margin-left: auto;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
 h3 {
   font-family: var(--font-serif);
   font-size: 1.12rem;
@@ -589,6 +610,23 @@ h3 {
   color: var(--teal-deep);
   margin: 1.65rem 0 0.65rem;
 }
+h3 .src-sec {
+  margin-left: 0.5rem;
+  font-size: 0.72rem;
+}
+.aside-note {
+  margin: 0.7rem 0 1.15rem;
+  padding: 0.56rem 0.88rem;
+  border-left: 3px solid var(--ochre);
+  background: var(--ochre-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.855rem;
+  line-height: 1.66;
+  color: var(--ink-body);
+}
+.aside-note p { margin: 0 0 0.35rem; text-align: left; }
+.aside-note p:last-child { margin-bottom: 0; }
+.aside-note strong { color: var(--ink); }
 p { margin: 0 0 0.95rem; text-align: justify; }
 ul, ol { margin: 0.5rem 0 1rem; padding-left: 1.4rem; }
 li { margin-bottom: 0.35rem; }
@@ -860,6 +898,10 @@ html[data-theme="dark"] .katex-html .pdr-ksym.is-sym-open {
   margin: 1.4rem 0 1.65rem;
   box-shadow: var(--shadow-card);
 }
+.fig-frame.is-compact {
+  max-width: 560px;
+  margin-inline: auto;
+}
 .fig-header {
   display: flex;
   align-items: center;
@@ -890,6 +932,82 @@ html[data-theme="dark"] .katex-html .pdr-ksym.is-sym-open {
 .fig-svg-wrap { width: 100%; overflow-x: auto; }
 .fig-svg-wrap svg { display: block; max-width: 100%; height: auto; }
 .fig-zoomable { cursor: zoom-in; }
+
+/* Side-by-Side Portrait Figure + Path-Anchored Reading Guide */
+.fig-split {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+.fig-split > .fig-svg-wrap { align-self: center; }
+.fig-guide {
+  background: var(--surface-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.78rem 0.92rem;
+}
+.fig-frame > .fig-guide { margin-top: 0.85rem; }
+.fig-guide-head {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--teal-deep);
+  margin: 0 0 0.52rem;
+  padding-bottom: 0.36rem;
+  border-bottom: 1px dashed var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.fig-guide-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.44rem;
+}
+.fig-guide-list > li {
+  margin: 0;
+  padding: 0.38rem 0.5rem;
+  border-radius: 6px;
+  border-left: 2.5px solid var(--teal-border);
+  background: var(--surface);
+  font-size: 0.825rem;
+  line-height: 1.56;
+  color: var(--ink-body);
+}
+.fig-guide-list > li.fg-sym { border-left-color: var(--ochre); }
+.fig-guide-list > li .fg-step {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.71rem;
+  font-weight: 700;
+  color: var(--teal);
+  background: var(--teal-soft);
+  border: 1px solid var(--teal-border);
+  border-radius: 4px;
+  padding: 0.02rem 0.36rem;
+  margin-right: 0.34rem;
+  vertical-align: 0.03em;
+}
+.fig-guide-list > li.fg-sym .fg-step {
+  color: var(--ochre);
+  background: var(--ochre-soft);
+  border-color: var(--ochre-border);
+}
+.fig-guide-list > li .fg-term {
+  font-family: var(--font-mono);
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--code-bg);
+  padding: 0.04rem 0.32rem;
+  border-radius: 4px;
+}
+.fig-guide-list > li strong { color: var(--ink); }
 
 /* Dark-Mode Protection for Light-Paper Matplotlib SVGs & Cropped Raster Images (Zero GPU Filter Shader) */
 html[data-theme="dark"] .fig-svg-wrap svg:not(.diag-svg),
@@ -983,6 +1101,14 @@ html[data-theme="dark"] .diag-svg .pdr-jump-node:focus-visible {
 .fig-steps path[pathLength="1"][data-step].is-on { stroke-dashoffset: 0; }
 .step-vals > [data-step] { display: none; opacity: 1; }
 .step-vals > [data-step].is-val-active { display: inline; opacity: 1; }
+.fig-steps svg .is-step-card { cursor: pointer; outline: none; }
+.fig-steps svg .is-step-card:focus-visible rect,
+.fig-steps svg .is-step-card:focus-visible ellipse,
+.fig-steps svg .is-step-card:focus-visible circle,
+.fig-steps svg .is-step-card:focus-visible polygon {
+  stroke: var(--teal);
+  stroke-width: 2.2;
+}
 /* Linked highlighting always overrides stepper rest states (including final step .is-still.is-now) */
 .fig-steps .svg-dimmed [data-step],
 .fig-steps .svg-dimmed [data-step].is-on,
@@ -990,6 +1116,11 @@ html[data-theme="dark"] .diag-svg .pdr-jump-node:focus-visible {
 .fig-steps .svg-dimmed .svg-node {
   opacity: 0.26;
   filter: none;
+}
+/* Exempt active .step-vals readouts from linked-highlight dimming so trace values stay legible */
+.fig-steps .svg-dimmed .step-vals > [data-step].is-val-active,
+.fig-steps.is-still .svg-dimmed .step-vals > [data-step].is-val-active {
+  opacity: 1;
 }
 .fig-steps .svg-dimmed .svg-node.is-highlighted,
 .fig-steps .svg-dimmed [data-step].is-highlighted,
@@ -1043,6 +1174,10 @@ html[data-theme="dark"] .fig-steps.is-still .svg-dimmed [data-step].is-now.is-hi
   color: var(--ink-body);
 }
 .steps-notes li[hidden] { display: none; }
+.fig-steps.is-previewing .steps-notes li {
+  border-left-style: dashed;
+  border-left-color: var(--ochre);
+}
 
 /* Live Formula / Parameter Explorer Card */
 .live-card {
@@ -1338,6 +1473,11 @@ td.cell-worst { background: var(--terra-soft); color: var(--terra); font-weight:
   padding: 0.2rem 0.55rem;
   border-radius: 5px;
 }
+.step-badge.is-preview {
+  color: var(--ochre);
+  background: var(--ochre-soft);
+  border-color: var(--ochre-border);
+}
 .step-note-bar {
   margin-top: 0.7rem;
   padding: 0.65rem 0.9rem;
@@ -1402,12 +1542,15 @@ td.cell-worst { background: var(--terra-soft); color: var(--terra); font-weight:
 .sb-stream b { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.2rem; }
 .sb-stream code { font-family: var(--font-mono); color: var(--teal-deep); font-size: 0.82rem; background: none; padding: 0; }
 
-/* Small Multiples 4-Card Grid */
+/* Elastic Case-Comparison Grid (2–3 col or vertical wide cards via .is-vertical) */
 .sm-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.85rem;
   margin: 1.25rem 0 1.6rem;
+}
+.sm-grid.is-vertical {
+  grid-template-columns: 1fr;
 }
 .sm-card {
   background: var(--surface);
@@ -1470,10 +1613,10 @@ td.cell-worst { background: var(--terra-soft); color: var(--terra); font-weight:
 }
 .search-input:focus { outline: none; border-color: var(--teal); background: var(--surface); }
 
-/* Balanced 2x2 Audit Grid */
+/* Elastic Limitations & Scope-Boundary Grid */
 .audit-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
   margin: 1.25rem 0 1.6rem;
 }
@@ -1501,10 +1644,10 @@ td.cell-worst { background: var(--terra-soft); color: var(--terra); font-weight:
 }
 .audit-card p { margin: 0; font-size: 0.87rem; line-height: 1.7; color: var(--ink-body); }
 
-/* 3-Column Engineering Transfer Cards */
+/* Elastic Implications / Transfer Cards */
 .transfer-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.95rem;
   margin: 1.2rem 0 1.6rem;
 }
@@ -2057,6 +2200,8 @@ html[data-theme="dark"] .lightbox-canvas.is-diag-canvas { background: var(--surf
   display: block;
   pointer-events: none;
 }
+.lightbox-canvas.fig-steps svg { pointer-events: auto; }
+.lightbox-canvas.fig-steps svg .is-step-card { cursor: pointer; }
 .lightbox-foot {
   padding: 0.62rem 1.1rem 0.72rem;
   background: var(--surface-tint);
@@ -2090,6 +2235,10 @@ html[data-theme="dark"] .lightbox-canvas.is-diag-canvas { background: var(--surf
   max-height: 4.8em;
   overflow-y: auto;
 }
+.lb-step-note.is-preview {
+  border-left-style: dashed;
+  border-left-color: var(--ochre);
+}
 
 /* Reduced Motion Respect */
 @media (prefers-reduced-motion: reduce) {
@@ -2102,9 +2251,9 @@ html[data-theme="dark"] .lightbox-canvas.is-diag-canvas { background: var(--surf
   .page-shell { grid-template-columns: 1fr; gap: 1.5rem; }
   .sidebar { position: static; max-height: none; }
   .toc-card { max-height: none; }
-  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .transfer-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .fig-split { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) {
   .meta-ribbon, .audit-grid, .sandbox-metrics, .sandbox-streams { grid-template-columns: 1fr; }

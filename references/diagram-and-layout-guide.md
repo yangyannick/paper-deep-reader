@@ -1,151 +1,115 @@
-# Visual Design System, Structured Flowcharts & Declarative Interactive Components (v1.3.0)
+# Visual Design System, Figures & Interactive Contract (v2.0.0)
 
-All visuals must harmonize with `assets/theme-morandi.css` and `assets/widgets.js`. Almost all interactive capabilities below are **declarative (zero bespoke JS)**—add semantic HTML/SVG attributes and `assets/widgets.js` wires them automatically in both Simplified Chinese and English (`<html lang>`).
+Single source of truth for **source figure presentation, `.diag-svg` craft, declarative `widgets.js` markup, bespoke interactive UX rules, and native CSS classes** across Simplified Chinese and English (`<html lang>`).
 
-## 1. Warm Paper Morandi & Restrained Midnight Slate Palette Contract
+## 1. Warm Paper Morandi & Midnight Slate Palette Contract
 
-Use CSS variables inside hand-drawn diagrams (`class="diag-svg"`) so flowcharts automatically adapt to Warm Paper Light and restrained Midnight Slate Dark modes (in dark mode, `.diag-svg` cards drop colorful tints to neutral slate surfaces with low-chroma strokes so dark screens never feel rainbow-noisy):
+Use CSS variables and `.diag-svg` helper classes inside custom diagrams so they automatically adapt between Warm Paper Light and Midnight Slate Dark modes:
 
 | Role | Light Hex | Dark Hex | CSS Var / `.diag-svg` Class |
 |---|---|---|---|
 | Page Ground | `#F7F5F0` | `#1B2028` | `var(--paper)` |
 | Card / Node Surface | `#FBF9F5` | `#272F3B` | `.d-card` (`--surface-tint` / `--border-strong`) |
-| Primary Ink / Text | `#1C1917` | `#ECF1F7` | `var(--ink)` (default on `.diag-svg text`) |
-| Muted Ink / Sublabels | `#6B655E` | `#8E9DB0` | `.d-muted` / `.d-edge` |
+| Primary / Muted Ink | `#1C1917` / `#6B655E` | `#ECF1F7` / `#8E9DB0` | `var(--ink)` / `.d-muted`, `.d-edge` |
 | Scholarly Teal (Proposed / Active) | `#265867` (`#EEF5F7`) | `#7AB3C4` | `.d-teal` / `.d-edge-hot` |
-| Muted Sage (Lossless / Gain) | `#2A7A68` (`#EFF8F5`) | `#7FB5A5` | `.d-sage` |
+| Muted Sage (Gain / Lossless) | `#2A7A68` (`#EFF8F5`) | `#7FB5A5` | `.d-sage` |
 | Muted Terracotta (Risk / Trade-off) | `#C85A3F` (`#FDF3F0`) | `#C98B7D` | `.d-terra` |
-| Warm Ochre (Caution / Symbol / Condition) | `#A66E38` (`#FDF7EE`) | `#C5A77B` | `.d-ochre` |
+| Warm Ochre (Caution / Condition) | `#A66E38` (`#FDF7EE`) | `#C5A77B` | `.d-ochre` |
 
-*(Matplotlib quantitative SVGs and original PDF raster crops stay on light academic paper in light mode and automatically receive a softened, low-glare paper plate in dark mode via `theme-morandi.css`—do not invert statistical charts.)*
-
----
-
-## 2. Five Structured Diagram Archetypes (Pick 1–2 That Clarify)
-
-Every paper monograph should pair a **bird's-eye whole-paper orientation** with **zoomed-in mechanism/protocol clarity**—never empty boxes with names alone, and never two diagrams repeating the same scope:
-
-1. **Whole-Paper Logic Panorama / Mind Map** *(ideal right after Executive Summary for ANY paper type)*:
-   - Gives readers a 1-glance overview of the entire paper's argument skeleton (e.g., *Problem / Constraints → Core Method Pillars or Taxonomy Branches → Key Findings / Regimes → Scope & Boundaries*), adapted to the paper:
-     - *Method / Systems / Empirical papers*: structured 4-stage causal flow (10–14 concise nodes with key numbers on branches);
-     - *Surveys / Taxonomies / Comparative papers*: clean 2–3 level hierarchical mind map / taxonomy tree;
-     - *Theory / Proof papers*: Assumption → Lemma → Main Theorem → Corollary dependency DAG.
-   - Attach `data-jump="#sec-01"` (etc.) on major blocks so clicking a node smoothly jumps straight to that section (with a return-to-reading pill). Keep typography crisp—never draw cramped 30–40 node spiderwebs with microscopic text.
-2. **Parallel Side-by-Side / Dual-Track Comparison** *(default for comparing structurally different baselines vs. proposed method)*:
-   - When the baseline and proposed approach have different topologies (e.g., two legacy failure branches vs. one multi-stage proposed pipeline), draw them **simultaneously in parallel upper/lower or left/right tracks** so readers contrast them in one glance with zero clicks and full print fidelity.
-3. **End-to-End Method / Data-Flow Pipeline** *(algorithms, ML architectures, signal processing, systems, Section 02)*:
-   - Annotate edges with **tensor shapes / data types / physical units**, attach **equation links**, and mark **bottlenecks or branches**.
-   - **High-leverage upgrade**: Attach `.fig-steps` + `.step-vals` so the worked concrete micro-example flows step-by-step right through the flowchart (also remains fully interactive inside Lightbox!).
-4. **Decision Tree / Experimental Protocol & Sample-Flow Diagram** *(adaptive control, state machines, experimental physics, clinical/empirical cohorts, large-scale benchmarks)*:
-   - Consolidate scattered `if/else` thresholds and escape branches onto an orthogonal routing tree, OR show cohort/dataset filtering → exclusion criteria (including footnotes) → experimental arms → final metric accounting.
-5. **Same-Coordinate View Toggle (`data-set-view`)** *(optional—ONLY for true same-coordinate or high-overlap diffs)*:
-   - Reserve interactive view toggling for cases where both views share identical coordinates or an identical architectural skeleton and overlaying them simultaneously would clutter the canvas (e.g., overlapping distributions/curves before vs. after a transform, absolute values vs. % delta on identical axes, or switching operating regimes on the same graph). Do NOT force a toggle when two diagrams have completely different layouts and read better in parallel!
-
-### Vector SVG Craft Rules
-1. **Zero text/line collisions & clean anchor alignment**: Keep ≥32–44px horizontal gaps between stage boxes; anchor connector arrows cleanly at box edge midpoints (never grazing rounded corners or floating off-edge); route feedback tracks cleanly above/below boxes; use crisp Unicode subscripts (`xₜ`, `yₜ`, `Iₙ₋₁`, `x̂ₜ`) inside `<text>` because KaTeX ignores `<svg>`.
-2. **Visual grouping & edges must match true logical topology**: Parallel elements belonging to the same stage or category must have clear visual grouping so readers immediately see what belongs together; every arrow or connector must express a genuine causal, sequential, or parent–child relationship—never draw forced cross-links between unrelated sibling nodes just to make a layout look symmetric.
-3. **Target-language consistency**: In Chinese monographs, every diagram header, stage title, and branch label must be in Simplified Chinese (keeping standard English acronyms and math variables).
-4. **Clear granularity separation**: Keep the top-of-article visual focused on the **whole-paper logic panorama** (bird's-eye arc or taxonomy), and Section 02's diagram focused on **formula-level data flow, internal mechanics, and worked-example stepping**—never duplicate the same overview twice.
+*(Matplotlib SVGs and original raster crops stay on light paper in light mode and receive a softened plate in dark mode via `theme-morandi.css`—never invert statistical charts.)*
 
 ---
 
-## 3. Declarative Interactive Toolkit (Zero Bespoke JS)
+## 2. Source Figure Forms, Numbering & `data-src` Coverage
 
-### 3.1 Declarative Flowchart Stepper & Worked-Example Replay (`.fig-steps`)
-Opens on the **complete final state (`N / N`)** for instant readability and print fidelity; clicking Play replays `1 → N`. `assets/widgets.js` injects the toolbar (`Prev / Replay / Range / Next / N/N`) automatically—just supply `[data-step]` attributes and `<ol class="steps-notes">`:
+Every source figure must appear **visibly** (in body or inside `<details class="deep-dive">`)—there is **no "omit" option**. Divide labor by **Fidelity vs. Explanation**:
+
+| Figure Category | Presentation Form | Title Format (ZH / EN) |
+|---|---|---|
+| **Data-backed quantitative chart** | Redraw in Morandi Matplotlib SVG to replace original (may split crowded panels into `a`/`b`) | `原文图 N（重绘）· ...` / `Figure N (redrawn) · ...` |
+| **Complex architecture / mechanism** (3D stacks, nested residual loops, dense schematics) | High-DPI crop (`220–300 DPI`) + **path-anchored `.fig-guide` reading breakdown** (portrait figures `H/W ≳ 1` use `.fig-split` left-image / right-guide; wide landscape figures stack image above `.fig-guide`; never use unordered `.sm-grid` cards to summarize prose instead of walking the figure) | `原文图 N · ...` / `Figure N · ...` |
+| **Simple schematic / small illustration** | High-DPI crop in compact frame (`.fig-frame.is-compact`, max `560px`) | `原文图 N · ...` / `Figure N · ...` |
+| **Photos / micrographs / waveforms / 100+ pt un-tabulated curves** | High-DPI crop (`220–300 DPI`) with `<img class="fig-img fig-zoomable">` | `原文图 N · ...` / `Figure N · ...` |
+| **Complementary pair** | Combined multi-panel keeping each subfigure visible | Label every subfigure with its original number |
+| **Secondary / appendix visuals** | High-DPI crop inside `<details class="deep-dive">` | `原文图 N · ...` / `Figure N · ...` |
+| **Added reading-aid diagram** (panorama, comparison, walkthrough) | Custom `.diag-svg` (or analytical Matplotlib SVG) | `图解 A · ...` / `Explainer A · ...` |
+
+- **Path-anchored reading guide (`.fig-guide`) standard for complex original crops**: Never summarize the body prose in 3–4 unordered `.sm-grid` cards. Instead, place a `.fig-guide` (inside `.fig-split` beside portrait figures, or directly inside `.fig-frame` below wide landscape figures) meeting three rules:
+  1. **Follow visual flow**: Order entries along the diagram's actual reading path (bottom-to-top or left-to-right), covering start-to-finish without dropping input/output layers;
+  2. **Anchor every core label**: In cross-language monographs, explicitly map `<span class="fg-term">Original Label</span> → <strong>中文译名</strong>` so readers who do not know the embedded English terms can trace every box directly;
+  3. **Decode non-verbal graphic cues**: Explicitly explain symbols, loops, and routing arrows (e.g., `⊕`, `N×`, bypass residual lines, split/merged arrow sources, 3D stacked brackets `h`) using `<li class="fg-sym">` where helpful.
+- **Mandatory `data-src`**: Add `data-src="fig1"`, `data-src="tab2"`, or `data-src="fig3 fig4"` (matching `source_inventory.json` IDs) on the `<figure>`, `.table-wrap`, or `<details class="deep-dive">` accounting for each source figure/table so `qa_static.py --inventory` can verify coverage.
+- **Cropping pipeline**: `extract_pdf.py --crop PAGE:x0,y0,x1,y1:name.png` (`220–300 DPI`) → `assemble_html.py --img TOKEN=path` (auto WebP/PNG).
+
+---
+
+## 3. Five Diagram Archetypes & Vector Craft (`.diag-svg`)
+
+1. **Whole-Paper Panorama** (`data-jump="#sec-..."`): 10–14 concise nodes mapping the paper's arc (pipeline, taxonomy tree, or theorem DAG); never 30+ node spiderwebs.
+2. **Parallel Dual-Track Comparison**: Default for structurally different baseline vs. proposed flows (1-glance contrast + print fidelity).
+3. **Mechanism / Data-Flow Pipeline**: Annotate tensor shapes, units, equation links, and bottlenecks; wire `.fig-steps` + `.step-vals` for concrete step-throughs.
+4. **Decision Tree / Cohort Flow**: Orthogonal routing for conditional thresholds or sample screening → exclusions (incl. footnotes) → arms → metrics.
+5. **Same-Coordinate View Toggle (`data-set-view`)**: ONLY for overlapping diffs sharing identical axes/topology.
+
+**Craft rules**: ≥32–44px gaps between stage boxes; anchor arrows at box edge midpoints; route feedback loops outside boxes; use Unicode subscripts (`xₜ`, `x̂ₜ`) since KaTeX ignores `<svg>`; match visual grouping and connectors strictly to real topology; separate panorama vs. close-up granularity; write labels in target language (keeping standard acronyms/variables).
+
+---
+
+## 4. Declarative Interactive Toolkit (Zero Bespoke JS)
+
+### 4.1 Flowchart Stepper (`.fig-steps`)
+Opens on the **final state (`N / N`)**; Play replays `1 → N`. Stage cards carrying non-zero `data-step` inside `.fig-steps` SVGs automatically get hover preview (120ms debounce; updates `.step-vals`, `.steps-notes`, and preview badge without moving the slider or dimming `.step-vals`) and click-to-jump (or Enter/Space; multi-step cards like `0 5 6` cycle `5 ↔ 6`; does not open Lightbox or hijack `[data-jump]`), synced live inside the zoomed Lightbox. Use `class="step-only" data-step="k"` for transient badges; cap `data-flow` to ≤1 figure/page.
 
 ```html
-<figure class="fig-frame fig-steps" id="fig-pipeline" data-lightbox-title="图 2 · 端到端流水线与微例推演">
+<figure class="fig-frame fig-steps" id="fig-walk" data-lightbox-title="图解 B · 流水线与微例推演">
   <div class="fig-header">
-    <div class="fig-title">图 2 · 端到端流水线与数值微例推演</div>
+    <div class="fig-title">图解 B · 流水线与微例推演</div>
     <div class="fig-actions"><button class="btn-zoom" type="button" data-zoom-btn>⤢ 放大查看</button></div>
   </div>
   <div class="fig-svg-wrap fig-zoomable">
-    <svg class="diag-svg" viewBox="0 0 860 280" role="img" aria-label="方法流水线图">
-      <!-- data-step="0" always visible; "0 2" always visible & highlighted on step 2; "2" appears at step 2 -->
+    <svg class="diag-svg" viewBox="0 0 860 260" role="img" aria-label="方法流水线图">
       <g class="svg-node" data-ref-node="enc" data-step="0 1">
-        <rect class="d-teal" x="24" y="60" width="180" height="76" rx="10" stroke-width="1.6"/>
-        <text x="114" y="92" text-anchor="middle" font-size="14" font-weight="700">阶段 1 · 预测</text>
-        <text class="d-muted" x="114" y="114" text-anchor="middle" font-size="11.5">Eq. (1): x̂ₜ = Σ aₖ xₜ₋ₖ</text>
+        <rect class="d-teal" x="24" y="50" width="180" height="72" rx="10" stroke-width="1.6"/>
+        <text x="114" y="82" text-anchor="middle" font-size="14" font-weight="700">阶段 1 · 预测</text>
+        <text class="d-muted" x="114" y="104" text-anchor="middle" font-size="11.5">式 (1): x̂ₜ = Σ aₖ xₜ₋ₖ</text>
       </g>
-      <!-- Attach data-flow directly to inter-box connector edges (never draw flow-route across box text!) -->
-      <path class="d-edge-hot" pathLength="1" data-step="2" data-flow="teal" data-every="1300" d="M204 98 H292"/>
-      <!-- .step-vals swaps live worked-example numbers in place as steps advance -->
+      <path class="d-edge-hot" pathLength="1" data-step="2" data-flow="teal" data-every="1300" d="M204 86 H292"/>
       <g class="step-vals" font-family="monospace" font-size="12">
-        <text data-step="1" x="114" y="158" text-anchor="middle">输入: [120, 122, 125]</text>
-        <text data-step="2" x="114" y="158" text-anchor="middle">预测 x̂₃ = 124 → 残差 e₃ = +1</text>
+        <text data-step="1" x="114" y="152" text-anchor="middle">输入: [120, 122, 125]</text>
+        <text data-step="2" x="114" y="152" text-anchor="middle">预测 x̂₃ = 124 → 残差 e₃ = +1</text>
       </g>
       <g class="flow-dots" aria-hidden="true"></g>
     </svg>
   </div>
   <ol class="steps-notes">
-    <li><strong>第 1 步（输入与预测）：</strong>读取前序样本并按式 (1) 计算预测值。</li>
-    <li><strong>第 2 步（残差输出）：</strong>计算残差 e₃ = +1 并送入熵编码器。</li>
+    <li><strong>第 1 步：</strong>读取前序样本并按式 (1) 计算预测值。</li>
+    <li><strong>第 2 步：</strong>计算残差 e₃ = +1 并送入熵编码器。</li>
   </ol>
-  <figcaption class="fig-caption">默认展示完整流水线；点击「逐步推演」可按微例逐步查看每阶段中间量。</figcaption>
+  <figcaption class="fig-caption">悬停阶段卡片预览中间量；点击卡片或播放条逐步推演。</figcaption>
 </figure>
 ```
-- Use `class="step-only" data-step="2"` for transient callout badges or active state rings visible **only** on listed step(s).
-- Keep `data-flow` proportional particles to **at most 1 key data-flow figure per page** so the page remains calm.
 
-### 3.2 Optional Same-Coordinate View Toggle (`data-set-view`)
-Use **only** when two views share identical coordinates or an identical architectural skeleton and overlaying them would clutter the canvas (for structurally different baseline vs. proposed flows, prefer a parallel dual-track diagram instead). Lightbox automatically preserves the toggle while zoomed!
+### 4.2 View Toggle (`data-set-view`), Linking (`data-ref`), Symbols (`data-sym-table`) & Tables (`data-interactive`)
+- **`data-set-view`**: Put `data-view="after"` on `<figure>`, `.view-switch` buttons with `data-set-view="before"|"after"`, and matching `[data-view-panel="before"|"after"]` SVG `<g>` or wrapper `<div>`s. Never add inline `style="display:none"` or `hidden` on `[data-view-panel]`.
+- **`data-ref` / `data-ref-node`**: Pair prose `<span class="ref-term" data-ref="k">` with SVG `data-ref-node="k"`. Prose hover highlights SVG only (does not trigger stepper preview).
+- **`<table data-sym-table>`**: Columns `[Symbol, Domain/Unit, Meaning]` (optional `tr[data-sym-def="T, T_win"]`). Auto-binds hover quick-cards onto rendered KaTeX (`$$...$$` and `$...$`) plus draggable `Σ 符号` floating sheet.
+- **`<table data-interactive>`**: Inside `.table-wrap[data-src="tab1"][data-table-title="原文表 1 · ..."]`. Auto-adds search, row count, CSV copy, and sort (pins `.row-total`; skips merged headers or `<5` rows). Add `th[data-better="high"|"low"]` **only** on comparable common-scale performance metrics.
+- **Drawers, Notes & Jumps**: `<details class="deep-dive"><summary>标题 <span class="pill">附录</span></summary><div class="deep-dive-body">...</div></details>`; `<div class="aside-note"><strong>注：</strong>...</div>`; `<a class="xref" href="#eq-1">式 (1)</a>`; `data-jump="#sec-02"`.
 
-```html
-<figure class="fig-frame" id="fig-diff" data-view="after" data-lightbox-title="图 1 · 传统基线与本文机制对照">
-  <div class="fig-header">
-    <div class="fig-title">图 1 · 传统基线与本文机制对照</div>
-    <div class="fig-actions">
-      <div class="view-switch" role="group" aria-label="视图切换">
-        <button type="button" class="view-btn" data-set-view="before">传统基线</button>
-        <button type="button" class="view-btn is-active" data-set-view="after">本文方法</button>
-      </div>
-      <button class="btn-zoom" type="button" data-zoom-btn>⤢ 放大查看</button>
-    </div>
-  </div>
-  <div class="fig-svg-wrap fig-zoomable">
-    <svg class="diag-svg" viewBox="0 0 840 240">
-      <!-- shared base nodes without data-view-panel -->
-      <g data-view-panel="before"><!-- baseline bottleneck path --></g>
-      <g data-view-panel="after"><!-- proposed bypass path --></g>
-    </svg>
-  </div>
-  <figcaption class="fig-caption">点击右上角按钮在同坐标系下切换传统路径与本文改进路径。</figcaption>
-</figure>
-```
-*(Also works with two sibling `<div data-view-panel="abs">` / `<div data-view-panel="rel">` wrapping separate SVGs; Lightbox automatically zooms the currently active visible panel. Do not add inline `style="display:none"` or `hidden` on `[data-view-panel]`—`widgets.js` manages panel visibility automatically.)*
+---
 
-### 3.3 Bidirectional Linked Highlighting (`data-ref`) & Symbol Quick-Cards (`data-sym`)
-- **Bidirectional `data-ref`**: Mark 3–6 key concepts in prose with `<span class="ref-term" data-ref="pred">线性预测器</span>` and matching SVG groups with `class="svg-node" data-ref-node="pred"` (or `data-ref="pred"`). Hovering/focusing **either side** illuminates all matching prose terms and SVG elements together.
-- **Auto-Indexed Symbol Hover Cards & Draggable Floating Symbol Sheet (`<table data-sym-table>`)**:
-  1. Add `data-sym-table` to the paper's symbol definition `<table>` (optionally add `data-sym-def="T, T_win"` on `<tr>` for aliases; columns: `[Symbol, Domain/Unit, Physical Meaning]`).
-  2. `assets/widgets.js` **automatically** binds hover quick-cards onto every matching symbol inside rendered KaTeX formulas—both display equations (`$$...$$`, clean at rest, highlights on hover) and inline math (`$...$`)—and adds a `📌 悬浮查看` / Masthead `Σ 符号` pinnable, draggable floating symbol sheet! Manual `<span class="sym-ref" data-sym="T">$T$</span>` remains supported for plain-text mentions or inline `data-sym-tip` fallbacks.
+## 5. Bespoke Interactive Contract (`--extra-js`)
 
-### 3.4 Declarative Interactive Tables (`<table data-interactive>`)
-Add `data-interactive` to any clean benchmark/results `<table>` inside `.table-wrap` (and set `data-table-title="表 1 · ..."` on `.table-wrap` or use `<caption>` so the left sidebar's `本篇表格` drawer shows a crisp label):
-- Automatically adds search filtering, visible row count, one-click `复制 CSV`, and click-to-sort headers while keeping `.row-total` pinned at the bottom.
-- **Semantic extrema highlighting (strictly opt-in via `data-better`)**: Add `data-better="high"` or `data-better="low"` **only** on `<th>` columns representing genuinely comparable performance metrics on a common scale. Never mark categorical labels, dataset names, method parameters, years, or mixed-scale non-comparable columns; `widgets.js` strictly highlights only columns carrying `data-better` (and hides the `极值高亮` button when no column declares it).
-- Automatically skips sorting on tables with `rowspan`/`colspan` or `< 5` data rows so merged academic headers are never scrambled.
-- Keep tables inline inside the subsection that discusses them; use `<details class="deep-dive">` or `.explorer-card` only when a paper genuinely has an oversized raw per-sample table (e.g., 30+ rows) or multi-tab sub-tables.
+1. **Reuse Infrastructure**: Never re-implement TOC, Lightbox, interactive tables, KaTeX symbol cards, highlights/marginalia, `.fig-steps`, or `data-set-view`.
+2. **Freeform Domain Visuals (No Forced Dashboard Cage)**: Craft bespoke `--extra-js` visuals whenever backed by an explicit formula, model, or measured parameter grid (or requested by the user). `.live-card` is an optional convenience shell, never mandatory. Compact scoped `<style>` with a unique prefix (e.g., `.lab-*`) is allowed using **Morandi CSS variables** only so Light/Dark modes stay harmonious; zero external libraries.
+3. **Three Pure UX Laws**:
+   - **Question-Driven**: Answers a specific body question, displays a 1-sentence "what to observe" cue, and states its takeaway in prose for static/print readers.
+   - **Zero Dead Controls**: Initializes at the paper's actual setup **and** visibly updates on every control interaction. If a parameter is invariant in the paper's default mode (e.g., scaled $d_k$), render the unscaled vs. scaled contrast side-by-side so the invariance itself becomes immediately visible.
+   - **Unmistakable Controls**: Style mode switches as clearly clickable segmented buttons/radios with distinct active/inactive states and keyboard support—never static-looking badges.
 
-### 3.5 Progressive Disclosure Drawers (`<details class="deep-dive">`), On-Demand Equation Notes (`.eq-note`) & Cross-References (`<a class="xref">`, `data-jump`)
-- Wrap lengthy algebraic derivations, secondary ablations, or verbatim quotes in:
-  ```html
-  <details class="deep-dive">
-    <summary>展开推导细节：递推复杂度与收敛边界 <span class="pill">推导</span></summary>
-    <div class="deep-dive-body">...</div>
-  </details>
-  ```
-  All `<details>` auto-expand on `Ctrl+P` print and restore afterward.
-- Inside `.eq-box`, add an optional `<div class="eq-note">` (1–3 concise lines separated by a dashed hairline) **only when** a core formula introduces local symbols, non-obvious operators, or key structural terms whose role isn't obvious at a glance; skip `.eq-note` for simple formulas already clear in prose.
-- Give figures (`id="fig-1"`), equations (`id="eq-1"`), and tables (`id="tab-1"`) stable IDs, and cite them with `<a class="xref" href="#fig-1">图 1</a>`. Inside overview flowcharts or mind maps, add `data-jump="#sec-02"` on any SVG `<g>` node so clicking smoothly jumps to that section with a transient `↩ 返回阅读处` pill.
+---
 
-### 3.6 Optional Live Formula / Parameter Explorer (`.live-card`)
-Use **only** when the paper provides an explicit analytical equation or measured parameter grid (never invent speculative curves):
-- 1–3 `<input type="range">` controls inside `.live-controls`, one clean pure `update()` function updating an inline SVG chart/readout, mark the paper's measured default value, and clearly state the exact equation (or label simplified intuition models `"机理示意"`).
-
-### 3.7 Canonical Page Shell, Native CSS Class Quick-Reference & Built-In Features
-Always start `body.html` with this canonical shell so scroll-spy, collapsible `本篇插图` / `本篇表格` drawers, reading progress, and right-margin marginalia attach cleanly:
+## 6. Canonical Shell, Native Classes & Built-In `widgets.js` Features
 
 ```html
 <div id="scroll-progress" aria-hidden="true"></div>
@@ -161,7 +125,7 @@ Always start `body.html` with this canonical shell so scroll-spy, collapsible `�
       <div class="toc-heading">Contents · 目录</div>
       <ul class="toc-list" id="toc-list">
         <li><a href="#sec-exec">核心导读</a></li>
-        <li><a href="#sec-01">01 · 研究背景</a></li>
+        <li><a href="#sec-01">01 · 引言</a></li>
       </ul>
     </nav>
   </aside>
@@ -169,32 +133,18 @@ Always start `body.html` with this canonical shell so scroll-spy, collapsible `�
 </div>
 ```
 
-**Morandi Native Layout Class Quick-Reference** *(use these directly—no need to inspect `assets/theme-morandi.css`)*:
+### Morandi Native Class Quick-Reference *(use directly—no need to read `theme-morandi.css`)*
 
-| Component | Exact Class Structure (`assets/theme-morandi.css`) |
+| Component | Class Structure (`assets/theme-morandi.css`) |
 |---|---|
-| **Hero & KPI Strip** | `.hero-card` → `.hero-accent-bar` + `.hero-body` (`.hero-kicker`, `h1`, `.hero-subtitle`, `.meta-ribbon` → `.meta-item` `span`/`strong`) + `.kpi-grid` (4-col) → `.kpi-cell` (`.kpi-num` + `.kpi-teal`/`.kpi-sage`/`.kpi-ochre`/`.kpi-terra`, `.kpi-label`, `.kpi-sub`) |
-| **Executive Summary** | `.exec-summary` → `.exec-summary-title` + `<p>` |
-| **Section Heading** | `<section id="sec-01">` → `<h2><span class="sec-idx">01</span> Title</h2>` |
-| **Equation Card** | `.eq-box[id]` → `.eq-label` (`<span>Title</span><span>Sect. X</span>`) + `$$...$$` + optional `.eq-note` |
-| **Figure Frame** | `<figure class="fig-frame [fig-steps]" id="fig-1" data-lightbox-title="...">` → `.fig-header` (`.fig-title`, `.fig-actions` → `button.btn-zoom[data-zoom-btn]`) + `.fig-svg-wrap.fig-zoomable` + `figcaption.fig-caption` |
-| **Table Frame** | `.table-wrap[id][data-table-title]` → `table[data-interactive \| data-sym-table][.compact-table]` (numeric `.num`, summary `tr.row-total`, deltas `.delta-pos`/`.delta-neg`/`.delta-neu`, extrema `th[data-better="high"\|"low"]`) |
-| **Small Multiples (4-col)** | `.sm-grid` → `.sm-card` (`.sm-head` → `.sm-name` + `.sm-k`, `.sm-desc`) |
-| **Evidence Boundary (2×2)** | `.audit-grid` → `.audit-card` (`.sev-high` / `.sev-mid` / `.sev-scope` / `.sev-sys`, `.audit-title`, `<p>`) |
-| **Transfer / Takeaways (3-col)** | `.transfer-grid` → `.transfer-card` (`.transfer-num`, `<h4>`, `<p>`) |
-| **Live Explorer / Sources** | `.live-card` (`.live-head`, `.live-controls` → `.live-slider-row`, `.live-readout`); `.sources-box` (`<h3>` + `<ul>`); badges `.pill` + `.pill-teal`/`.pill-sage`/`.pill-ochre`/`.pill-terra` |
+| **Hero & Highlights** | `.hero-card` → `.hero-accent-bar` + `.hero-body` (`.hero-kicker`, `h1`, `.hero-subtitle`, `.meta-ribbon` → `.meta-item` `span`/`strong`) + `.kpi-grid` *(elastic 2–4 cols)* → `.kpi-cell` (`.kpi-num` + `.kpi-teal`/`.kpi-sage`/`.kpi-ochre`/`.kpi-terra`, `.kpi-label`, `.kpi-sub`) |
+| **Core Overview** | `.exec-summary` → `.exec-summary-title` + `<p>` + `<ul><li>` |
+| **Headings** | `<section id="sec-01">` → `<h2><span class="sec-idx">01</span> Title <span class="src-sec">§2</span></h2>`; `<h3>Sub <span class="src-sec">§2.1</span></h3>` |
+| **Equation / Aside** | `.eq-box[id]` → `.eq-label` + `$$...$$` + optional `.eq-note`; in-place note `.aside-note` |
+| **Figure Frame** | `<figure class="fig-frame [is-compact] [fig-steps]" id="fig-1" data-src="fig1" data-lightbox-title="...">` → `.fig-header` (`.fig-title`, `.fig-actions` → `button.btn-zoom[data-zoom-btn]`) + `.fig-svg-wrap.fig-zoomable` (or `img.fig-img.fig-zoomable`) + `figcaption.fig-caption` |
+| **Figure Reading Guide** | Portrait original: `.fig-split` → `.fig-svg-wrap` (left) + `.fig-guide` (right); Landscape original: `.fig-guide` directly below `.fig-svg-wrap`. Inside `.fig-guide`: `.fig-guide-head` + `ol.fig-guide-list` → `li[.fg-sym]` (`span.fg-step` + `span.fg-term` + `strong` + concise role/arrow explanation) |
+| **Table Frame** | `.table-wrap[id][data-src][data-table-title]` → `table[data-interactive\|data-sym-table][.compact-table]` (`.num`, `tr.row-total`, `.delta-pos`/`.delta-neg`/`.delta-neu`, `th[data-better]`) |
+| **Case / Limits / Transfer** | `.sm-grid` *(2–3 col)* or `.sm-grid.is-vertical` *(stacked wide)* → `.sm-card` (`.sm-head` → `.sm-name`/`.sm-k`, `.sm-desc`); `.audit-grid` → `.audit-card` (`.sev-high`/`.sev-mid`/`.sev-scope`/`.sev-sys`, `.audit-title`, `<p>`); `.transfer-grid` → `.transfer-card` (`.transfer-num`, `<h4>`, `<p>`) |
+| **Explorer / Sources** | Optional `.live-card` (`.live-head`, `.live-controls` → `.live-slider-row`, `.live-readout`); `.sources-box` (`<h3>` + `<ul>`); `.pill` + `.pill-teal`/`.pill-sage`/`.pill-ochre`/`.pill-terra` |
 
-`assets/widgets.js` enables these automatically on every assembled monograph:
-- **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ restrained Midnight Slate Dark toggle (persisted via `localStorage`).
-- **Frameless Editorial Left Sidebar**: Clean borderless section outline rail with quiet collapsible `本篇插图` / `本篇表格` (`Figures` / `Tables`) drawers below, plus mini progress bar and estimated reading time.
-- **Zero-Clutter Highlighter, Marginalia & Exportable Notes**: Selecting any passage (including across inline `<code>` and KaTeX formulas) pops 3 Morandi color dots for instant 1-click inline highlighting plus `✎ 批注 | ? 提问`; clicking an existing pure highlight allows recoloring, upgrading to a note, or deleting. Pure highlights stay inline without crowding the right margin, while written notes/questions appear on wide screens (`≥ 1340px`) as aligned right-margin marginalia; the Masthead `✎ 笔记 N` pill provides filtered review (`全部 / 批注与提问 / 高亮摘录`) and one-click Markdown copy / `.md` download.
-- **Interactive 120fps Vector Pan & Zoom Lightbox**: Works on every `.fig-frame` SVG or `<img>` (including cropped original figures), and **automatically mounts synced `.fig-steps` stepper controls (`←` / `→` / `Space` + step notes) and `data-set-view` Before/After toggles inside the Lightbox footer** so readers can step and flip views live without losing pan/zoom position.
-
----
-
-## 4. Layout & Performance Non-Negotiables
-
-- **Zero Google Fonts `<link>` tags** and **zero `backdrop-filter: blur(...)`**.
-- **Keep `content-visibility: auto`** on `.fig-frame` and `.explorer-card` (already in `assets/theme-morandi.css`).
-- **Balanced grids**: 4-column flush KPIs, 4-column Small Multiples, 2×2 Evidence Boundary cards, 3-column Engineering Transfer cards.
-- **Clean print**: `@media print` automatically hides UI chrome, expands `<details>`, and locks steppers to their final complete state.
+**Built-in automatically via `widgets.js`**: Masthead Light/Dark toggle, `A−`/`A+`, draggable `Σ 符号` floating sheet, filtered `✎ 笔记 N` drawer + Markdown export; frameless sidebar with `本篇插图`/`本篇表格` drawers & reading progress; KaTeX-safe 3-color highlighter + wide-screen marginalia (`≥1340px`); 120fps pan/zoom Lightbox preserving `.fig-steps` & `data-set-view`; clean `@media print`.
