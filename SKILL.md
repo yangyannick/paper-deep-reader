@@ -1,17 +1,13 @@
 ---
 name: paper-deep-reader
 description: >-
-  Transform any research paper PDF (local file, Zotero item, or arXiv/DOI paper) into a standalone,
-  self-contained interactive HTML deep-reading monograph with Warm Paper Morandi magazine layout
-  (Light & Warm Dark modes), verified formulas (KaTeX, optional air-gapped offline bundle),
-  interactive flowcharts & worked-example steppers, publication-grade Matplotlib plots, symbol
-  quick-cards, sortable data tables, local notes export, and a 120fps vector pan/zoom lightbox.
-  Explicit invocation only — use when the user explicitly names paper-deep-reader or specifically
-  requests generating an interactive HTML deep-reading page for a research paper. Do NOT auto-trigger
-  for quick paper questions, brief summaries, or ordinary chat discussions.
+  Generate a standalone interactive HTML deep-reading monograph from a research paper PDF
+  (local file, Zotero item, arXiv, or OA DOI) with verified equations, flowcharts, and charts.
+  Explicit invocation only — use only when the user names paper-deep-reader or explicitly asks
+  for an interactive HTML paper deep-reading page; do not auto-trigger for quick Q&A or summaries.
 license: MIT
 metadata:
-  version: "1.4.1"
+  version: "1.5.0"
 ---
 
 # Paper Deep Reader (`paper-deep-reader`)
