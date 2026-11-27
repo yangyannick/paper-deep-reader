@@ -1332,6 +1332,14 @@
     }
   })();
 
+  function setViewPanelVisible(p, visible) {
+    p.classList.toggle('is-view-hidden', !visible);
+    if (visible) {
+      if (p.style && p.style.display === 'none') p.style.display = '';
+      if (p.hidden) p.hidden = false;
+    }
+  }
+
   // 6. Same-Coordinate View Switch / Before-After Toggle
   (function initViewSwitches() {
     document.querySelectorAll('.fig-frame').forEach(frame => {
@@ -1348,7 +1356,7 @@
         });
         panels.forEach(p => {
           const allowed = (p.getAttribute('data-view-panel') || '').trim().split(/\s+/);
-          p.classList.toggle('is-view-hidden', !allowed.includes(key));
+          setViewPanelVisible(p, allowed.includes(key));
         });
         frame.dispatchEvent(new CustomEvent('pdr:view', { detail: { view: key } }));
       }
@@ -2714,7 +2722,7 @@
               if (innerPanels.length) {
                 innerPanels.forEach(p => {
                   const allowed = (p.getAttribute('data-view-panel') || '').trim().split(/\s+/);
-                  p.classList.toggle('is-view-hidden', !allowed.includes(key));
+                  setViewPanelVisible(p, allowed.includes(key));
                 });
               } else {
                 const nextSrc = pickVisibleGraphic(frame);

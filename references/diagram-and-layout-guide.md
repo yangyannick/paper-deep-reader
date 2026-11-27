@@ -113,7 +113,7 @@ Use **only** when two views share identical coordinates or an identical architec
   <figcaption class="fig-caption">点击右上角按钮在同坐标系下切换传统路径与本文改进路径。</figcaption>
 </figure>
 ```
-*(Also works with two sibling `<div data-view-panel="abs">` / `<div data-view-panel="rel">` wrapping separate SVGs; Lightbox automatically zooms the currently active visible panel.)*
+*(Also works with two sibling `<div data-view-panel="abs">` / `<div data-view-panel="rel">` wrapping separate SVGs; Lightbox automatically zooms the currently active visible panel. Do not add inline `style="display:none"` or `hidden` on `[data-view-panel]`—`widgets.js` manages panel visibility automatically.)*
 
 ### 3.3 Bidirectional Linked Highlighting (`data-ref`) & Symbol Quick-Cards (`data-sym`)
 - **Bidirectional `data-ref`**: Mark 3–6 key concepts in prose with `<span class="ref-term" data-ref="pred">线性预测器</span>` and matching SVG groups with `class="svg-node" data-ref-node="pred"` (or `data-ref="pred"`). Hovering/focusing **either side** illuminates all matching prose terms and SVG elements together.

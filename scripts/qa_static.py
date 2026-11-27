@@ -115,6 +115,18 @@ def main() -> None:
             missing = sorted(view_btns - view_panels)
             if missing:
                 errors.append(f"Figure #{idx} has data-set-view button(s) {missing} with no matching data-view-panel.")
+            for ptag in re.findall(r'<[^>]*\bdata-view-panel="[^"]+"[^>]*>', block):
+                has_inline_none = bool(
+                    re.search(r'(?<![\w-])style=(["\'])(?:(?!\1).)*?\bdisplay\s*:\s*none\b', ptag, flags=re.I | re.S)
+                )
+                has_hidden_attr = bool(
+                    re.search(r'(?<![\w-])hidden(?:\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+))?(?=[\s/>])', ptag, flags=re.I)
+                )
+                if has_inline_none or has_hidden_attr:
+                    warnings.append(
+                        f"Figure #{idx} [data-view-panel] has inline display:none or hidden; omit it and let widgets.js manage visibility."
+                    )
+                    break
 
     fig_parts = re.split(r"(<figure\b.*?</figure>)", text, flags=re.S)
     consec_figs = 0
