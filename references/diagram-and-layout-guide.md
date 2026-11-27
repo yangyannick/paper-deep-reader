@@ -42,7 +42,7 @@ Every paper monograph should pair a **bird's-eye whole-paper orientation** with 
    - Reserve interactive view toggling for cases where both views share identical coordinates or an identical architectural skeleton and overlaying them simultaneously would clutter the canvas (e.g., overlapping distributions/curves before vs. after a transform, absolute values vs. % delta on identical axes, or switching operating regimes on the same graph). Do NOT force a toggle when two diagrams have completely different layouts and read better in parallel!
 
 ### Vector SVG Craft Rules
-1. **Zero text/line collisions**: Keep ≥32–44px horizontal gaps between stage boxes; route feedback tracks cleanly above/below boxes; use crisp Unicode subscripts (`xₜ`, `yₜ`, `Iₙ₋₁`, `x̂ₜ`) inside `<text>` because KaTeX ignores `<svg>`.
+1. **Zero text/line collisions & clean anchor alignment**: Keep ≥32–44px horizontal gaps between stage boxes; anchor connector arrows cleanly at box edge midpoints (never grazing rounded corners or floating off-edge); route feedback tracks cleanly above/below boxes; use crisp Unicode subscripts (`xₜ`, `yₜ`, `Iₙ₋₁`, `x̂ₜ`) inside `<text>` because KaTeX ignores `<svg>`.
 2. **Visual grouping & edges must match true logical topology**: Parallel elements belonging to the same stage or category must have clear visual grouping so readers immediately see what belongs together; every arrow or connector must express a genuine causal, sequential, or parent–child relationship—never draw forced cross-links between unrelated sibling nodes just to make a layout look symmetric.
 3. **Target-language consistency**: In Chinese monographs, every diagram header, stage title, and branch label must be in Simplified Chinese (keeping standard English acronyms and math variables).
 4. **Clear granularity separation**: Keep the top-of-article visual focused on the **whole-paper logic panorama** (bird's-eye arc or taxonomy), and Section 02's diagram focused on **formula-level data flow, internal mechanics, and worked-example stepping**—never duplicate the same overview twice.
@@ -68,15 +68,13 @@ Opens on the **complete final state (`N / N`)** for instant readability and prin
         <text x="114" y="92" text-anchor="middle" font-size="14" font-weight="700">阶段 1 · 预测</text>
         <text class="d-muted" x="114" y="114" text-anchor="middle" font-size="11.5">Eq. (1): x̂ₜ = Σ aₖ xₜ₋ₖ</text>
       </g>
-      <!-- pathLength="1" draws the connector smoothly when stepping -->
-      <path class="d-edge-hot" pathLength="1" data-step="2" d="M204 98 H292"/>
+      <!-- Attach data-flow directly to inter-box connector edges (never draw flow-route across box text!) -->
+      <path class="d-edge-hot" pathLength="1" data-step="2" data-flow="teal" data-every="1300" d="M204 98 H292"/>
       <!-- .step-vals swaps live worked-example numbers in place as steps advance -->
       <g class="step-vals" font-family="monospace" font-size="12">
         <text data-step="1" x="114" y="158" text-anchor="middle">输入: [120, 122, 125]</text>
         <text data-step="2" x="114" y="158" text-anchor="middle">预测 x̂₃ = 124 → 残差 e₃ = +1</text>
       </g>
-      <!-- Optional proportional flow dots (MAX 1 figure per page; pauses off-screen & under reduced motion) -->
-      <path class="flow-route" data-flow="teal" data-every="1100" d="M114 98 H460"/>
       <g class="flow-dots" aria-hidden="true"></g>
     </svg>
   </div>
@@ -119,9 +117,9 @@ Use **only** when two views share identical coordinates or an identical architec
 
 ### 3.3 Bidirectional Linked Highlighting (`data-ref`) & Symbol Quick-Cards (`data-sym`)
 - **Bidirectional `data-ref`**: Mark 3–6 key concepts in prose with `<span class="ref-term" data-ref="pred">线性预测器</span>` and matching SVG groups with `class="svg-node" data-ref-node="pred"` (or `data-ref="pred"`). Hovering/focusing **either side** illuminates all matching prose terms and SVG elements together.
-- **Auto-Indexed Symbol Hover Cards (`data-sym`)**:
-  1. Add `data-sym-table` to the paper's symbol definition `<table>` (optionally add `data-sym-def="T, T_win"` on `<tr>` when a row defines a formatted LaTeX symbol like `$T$` or multiple aliases; columns: `[Symbol, Domain/Unit, Physical Meaning]`).
-  2. In later sections, mark recurring symbols in prose with `<span class="sym-ref" data-sym="T">$T$</span>` (or inline fallback `<span class="sym-ref" data-sym="T" data-sym-tip="自相关训练窗长 (samples)">$T$</span>`). Hovering/clicking displays a Morandi quick-card with a one-click `定位到符号表 ↗` jump!
+- **Auto-Indexed Symbol Hover Cards & Draggable Floating Symbol Sheet (`<table data-sym-table>`)**:
+  1. Add `data-sym-table` to the paper's symbol definition `<table>` (optionally add `data-sym-def="T, T_win"` on `<tr>` for aliases; columns: `[Symbol, Domain/Unit, Physical Meaning]`).
+  2. `assets/widgets.js` **automatically** binds hover quick-cards onto every matching symbol inside rendered KaTeX formulas—both display equations (`$$...$$`, clean at rest, highlights on hover) and inline math (`$...$`)—and adds a `📌 悬浮查看` / Masthead `Σ 符号` pinnable, draggable floating symbol sheet! Manual `<span class="sym-ref" data-sym="T">$T$</span>` remains supported for plain-text mentions or inline `data-sym-tip` fallbacks.
 
 ### 3.4 Declarative Interactive Tables (`<table data-interactive>`)
 Add `data-interactive` to any clean benchmark/results `<table>` inside `.table-wrap` (and set `data-table-title="表 1 · ..."` on `.table-wrap` or use `<caption>` so the left sidebar's `本篇表格` drawer shows a crisp label):
@@ -174,7 +172,7 @@ Always start `body.html` with this canonical shell so scroll-spy, collapsible `�
 `assets/widgets.js` enables these automatically on every assembled monograph:
 - **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ restrained Midnight Slate Dark toggle (persisted via `localStorage`).
 - **Frameless Editorial Left Sidebar**: Clean borderless section outline rail with quiet collapsible `本篇插图` / `本篇表格` (`Figures` / `Tables`) drawers below, plus mini progress bar and estimated reading time.
-- **Zero-Clutter Marginalia & Exportable Notes**: Selecting any passage (including across inline `<code>` and KaTeX formulas) pops `✎ 批注 | ? 提问`; each `.fig-frame` gets a subtle `✎` icon (with inline `批注 / 疑问` switch). On wide screens (`≥ 1340px`), saved notes appear automatically as aligned right-margin marginalia linked to soft inline highlights (completely empty when 0 notes), while the Masthead `✎ 笔记 N` pill provides centralized review and one-click Markdown copy / `.md` download.
+- **Zero-Clutter Highlighter, Marginalia & Exportable Notes**: Selecting any passage (including across inline `<code>` and KaTeX formulas) pops 3 Morandi color dots for instant 1-click inline highlighting plus `✎ 批注 | ? 提问`; clicking an existing pure highlight allows recoloring, upgrading to a note, or deleting. Pure highlights stay inline without crowding the right margin, while written notes/questions appear on wide screens (`≥ 1340px`) as aligned right-margin marginalia; the Masthead `✎ 笔记 N` pill provides filtered review (`全部 / 批注与提问 / 高亮摘录`) and one-click Markdown copy / `.md` download.
 - **Interactive 120fps Vector Pan & Zoom Lightbox**: Works on every `.fig-frame` SVG or `<img>` (including cropped original figures), and **automatically mounts synced `.fig-steps` stepper controls (`←` / `→` / `Space` + step notes) and `data-set-view` Before/After toggles inside the Lightbox footer** so readers can step and flip views live without losing pan/zoom position.
 
 ---

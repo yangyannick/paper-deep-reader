@@ -31,6 +31,11 @@
         play: '▶ 逐步推演',
         pause: '❚❚ 暂停',
         symJump: '定位到符号表 ↗',
+        symFloatBtn: 'Σ 符号',
+        symFloatTitle: 'Σ 符号速查表（可拖动）',
+        symPinBtn: '📌 悬浮查看',
+        symSearch: '筛选符号或含义…',
+        symMin: '折叠/展开',
         jumpBack: '↩ 返回阅读处',
         tblSearch: '筛选行…',
         tblRows: (v, t) => v + ' / ' + t + ' 行',
@@ -40,6 +45,15 @@
         figNoteTitle: '对此图记批注或提问',
         selNote: '✎ 批注',
         selAsk: '? 提问',
+        hlAmber: '暖黄高亮',
+        hlSage: '浅青高亮',
+        hlRose: '淡粉高亮',
+        hlAdded: '已高亮标注',
+        hlAddNote: '+ 补批注',
+        tagHl: '高亮',
+        tabAll: '全部',
+        tabNotes: '批注与提问',
+        tabHls: '高亮摘录',
         notePlaceholder: '写下你的批注（Ctrl+Enter 保存）…',
         askPlaceholder: '写下你的疑问，可导出发给 AI 追问（Ctrl+Enter 保存）…',
         cancel: '取消',
@@ -84,6 +98,11 @@
         play: '▶ Replay',
         pause: '❚❚ Pause',
         symJump: 'Jump to symbol table ↗',
+        symFloatBtn: 'Σ Symbols',
+        symFloatTitle: 'Σ Symbol Reference (drag)',
+        symPinBtn: '📌 Float',
+        symSearch: 'Filter symbols…',
+        symMin: 'Minimize / Expand',
         jumpBack: '↩ Back to reading',
         tblSearch: 'Filter rows…',
         tblRows: (v, t) => v + ' / ' + t + ' rows',
@@ -93,6 +112,15 @@
         figNoteTitle: 'Annotate or ask about this figure',
         selNote: '✎ Note',
         selAsk: '? Ask',
+        hlAmber: 'Amber highlight',
+        hlSage: 'Sage highlight',
+        hlRose: 'Rose highlight',
+        hlAdded: 'Highlighted',
+        hlAddNote: '+ Add note',
+        tagHl: 'Highlight',
+        tabAll: 'All',
+        tabNotes: 'Notes & Qs',
+        tabHls: 'Highlights',
         notePlaceholder: 'Write a reading note (Ctrl+Enter to save)…',
         askPlaceholder: 'Write a question to export or ask an AI (Ctrl+Enter)…',
         cancel: 'Cancel',
@@ -547,27 +575,69 @@
     });
   })();
 
-  // 4. Auto-Indexed Symbol Hover Quick-Card (data-sym, live KaTeX DOM cloning)
+  // 4. Auto-Indexed Symbol Hover Quick-Card (manual data-sym + auto KaTeX formula binding + draggable floating sheet)
   (function initSymbolCards() {
-    const refs = Array.from(document.querySelectorAll('[data-sym]'));
-    if (!refs.length) return;
+    const manualRefs = Array.from(document.querySelectorAll('[data-sym]'));
+    const symTables = Array.from(document.querySelectorAll('table[data-sym-table]'));
+    const explicitDefRows = Array.from(document.querySelectorAll('tr[data-sym-def]'));
+    if (!manualRefs.length && !symTables.length && !explicitDefRows.length) return;
 
     const symMap = new Map();
+    const allEntries = [];
     function cleanKey(s) {
       return (s || '').replace(/\$/g, '').replace(/\s+/g, ' ').trim();
+    }
+    function normMathKey(s) {
+      return (s || '')
+        .replace(/[\s\u200b\u00a0\u2061]+/g, '')
+        .replace(/['’]/g, '′')
+        .trim();
+    }
+    function normLatexAlias(s) {
+      return normMathKey(
+        (s || '')
+          .replace(/\$/g, '')
+          .replace(/\\(?:mathrm|mathbf|boldsymbol|textbf|text|mathit|mathcal|operatorname)\s*\{([^}]*)\}/g, '$1')
+          .replace(/\\sigma\b/g, 'σ')
+          .replace(/\\Sigma\b/g, 'Σ')
+          .replace(/\\Delta\b/g, 'Δ')
+          .replace(/\\delta\b/g, 'δ')
+          .replace(/\\alpha\b/g, 'α')
+          .replace(/\\beta\b/g, 'β')
+          .replace(/\\gamma\b/g, 'γ')
+          .replace(/\\lambda\b/g, 'λ')
+          .replace(/\\theta\b/g, 'θ')
+          .replace(/\\omega\b/g, 'ω')
+          .replace(/\\nu\b/g, 'ν')
+          .replace(/\\mu\b/g, 'μ')
+          .replace(/\\rho\b/g, 'ρ')
+          .replace(/\\tau\b/g, 'τ')
+          .replace(/\\phi\b/g, 'ϕ')
+          .replace(/\\psi\b/g, 'ψ')
+          .replace(/\\epsilon\b/g, 'ϵ')
+          .replace(/\\varepsilon\b/g, 'ε')
+          .replace(/\\max\b/g, 'max')
+          .replace(/\\min\b/g, 'min')
+          .replace(/[_^{}\\]/g, '')
+      );
     }
     function indexRow(tr, explicitKeys) {
       const cells = Array.from(tr.querySelectorAll('td'));
       if (cells.length < 2) return;
+      if (tr._pdrSymEntry) return;
       const symText = cleanKey(cells[0].textContent);
-      const entry = { rowEl: tr, cells: cells };
+      const entry = { rowEl: tr, cells: cells, explicitKeys: explicitKeys || '' };
+      tr._pdrSymEntry = entry;
+      allEntries.push(entry);
       const keys = (explicitKeys || symText).split(',').map(cleanKey).filter(Boolean);
       keys.forEach(k => { if (!symMap.has(k)) symMap.set(k, entry); });
     }
 
-    document.querySelectorAll('tr[data-sym-def]').forEach(tr => indexRow(tr, tr.getAttribute('data-sym-def')));
-    document.querySelectorAll('table[data-sym-table] tbody tr').forEach(tr => {
-      indexRow(tr, tr.getAttribute('data-sym-def') || '');
+    explicitDefRows.forEach(tr => indexRow(tr, tr.getAttribute('data-sym-def')));
+    symTables.forEach(tbl => {
+      tbl.querySelectorAll('tbody tr').forEach(tr => {
+        indexRow(tr, tr.getAttribute('data-sym-def') || '');
+      });
     });
 
     let pop = null;
@@ -577,22 +647,23 @@
     function closePop() {
       if (hideTimer) { clearTimeout(hideTimer); hideTimer = 0; }
       if (pop) { pop.remove(); pop = null; }
-      if (activeRef) { activeRef.classList.remove('is-sym-open'); activeRef = null; }
+      if (activeRef) {
+        if (Array.isArray(activeRef)) activeRef.forEach(n => n.classList.remove('is-sym-open'));
+        else activeRef.classList.remove('is-sym-open');
+        activeRef = null;
+      }
     }
     function scheduleClose() {
       if (hideTimer) clearTimeout(hideTimer);
       hideTimer = setTimeout(closePop, 150);
     }
 
-    function openPop(el) {
-      const rawKey = cleanKey(el.getAttribute('data-sym'));
-      const tip = (el.getAttribute('data-sym-tip') || '').trim();
-      const entry = symMap.get(rawKey) || null;
-      if (!entry && !tip) return;
-
+    function openPopForEntry(anchorEl, entry, fallbackTip, fallbackDomain, highlightEls) {
+      if (!entry && !fallbackTip) return;
       closePop();
-      activeRef = el;
-      el.classList.add('is-sym-open');
+      activeRef = highlightEls && highlightEls.length ? highlightEls : anchorEl;
+      if (Array.isArray(activeRef)) activeRef.forEach(n => n.classList.add('is-sym-open'));
+      else activeRef.classList.add('is-sym-open');
 
       pop = document.createElement('div');
       pop.className = 'pdr-sym-pop';
@@ -605,7 +676,7 @@
       if (entry && entry.cells[0]) {
         Array.from(entry.cells[0].childNodes).forEach(n => keyEl.appendChild(n.cloneNode(true)));
       } else {
-        Array.from(el.childNodes).forEach(n => keyEl.appendChild(n.cloneNode(true)));
+        Array.from(anchorEl.childNodes).forEach(n => keyEl.appendChild(n.cloneNode(true)));
       }
       head.appendChild(keyEl);
 
@@ -614,10 +685,10 @@
         domEl.className = 'pdr-sym-domain';
         Array.from(entry.cells[1].childNodes).forEach(n => domEl.appendChild(n.cloneNode(true)));
         head.appendChild(domEl);
-      } else if (!entry && el.getAttribute('data-sym-domain')) {
+      } else if (!entry && fallbackDomain) {
         const domEl = document.createElement('span');
         domEl.className = 'pdr-sym-domain';
-        domEl.textContent = el.getAttribute('data-sym-domain');
+        domEl.textContent = fallbackDomain;
         head.appendChild(domEl);
       }
       pop.appendChild(head);
@@ -631,7 +702,7 @@
           Array.from(c.childNodes).forEach(n => body.appendChild(n.cloneNode(true)));
         });
       } else {
-        body.textContent = tip;
+        body.textContent = fallbackTip;
       }
       pop.appendChild(body);
 
@@ -651,7 +722,6 @@
         pop.appendChild(foot);
       }
 
-      // Guarantee KaTeX rendering even for inline data-sym-tip or early hover before initial auto-render
       if (typeof window.renderMathInElement === 'function' && pop.textContent.indexOf('$') !== -1) {
         window.renderMathInElement(pop, {
           delimiters: [
@@ -667,7 +737,7 @@
       pop.addEventListener('mouseleave', scheduleClose);
       document.body.appendChild(pop);
 
-      const rect = el.getBoundingClientRect();
+      const rect = anchorEl.getBoundingClientRect();
       const pw = pop.offsetWidth;
       const ph = pop.offsetHeight;
       let left = rect.left + rect.width / 2 - pw / 2;
@@ -678,20 +748,346 @@
       pop.style.top = top.toFixed(0) + 'px';
     }
 
-    refs.forEach(el => {
+    function openPop(el) {
+      const rawKey = cleanKey(el.getAttribute('data-sym'));
+      const tip = (el.getAttribute('data-sym-tip') || '').trim();
+      const entry = symMap.get(rawKey) || null;
+      openPopForEntry(el, entry, tip, el.getAttribute('data-sym-domain') || '', null);
+    }
+
+    manualRefs.forEach(el => {
       if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
       el.addEventListener('mouseenter', () => openPop(el));
       el.addEventListener('mouseleave', scheduleClose);
       el.addEventListener('focus', () => openPop(el));
       el.addEventListener('blur', scheduleClose);
       el.addEventListener('click', (e) => {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) return;
         e.stopPropagation();
         if (activeRef === el) closePop();
         else openPop(el);
       });
     });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
-    document.addEventListener('click', (e) => { if (pop && !pop.contains(e.target) && e.target !== activeRef) closePop(); });
+
+    // Automatic hover binding onto rendered KaTeX formulas (both display $$...$$ and inline $...$)
+    function buildKatexSymMap() {
+      const kMap = new Map();
+      function reg(rawKey, entry) {
+        const k = normMathKey(rawKey);
+        if (!k || /^\d+(?:\.\d+)?$/.test(k)) return;
+        if (!kMap.has(k)) kMap.set(k, entry);
+      }
+      allEntries.forEach(entry => {
+        const c0 = entry.cells[0];
+        if (c0) {
+          const kHtmls = c0.querySelectorAll('.katex-html');
+          if (kHtmls.length) {
+            kHtmls.forEach(kh => {
+              const parts = (kh.textContent || '').split(/[,，、;]/);
+              parts.forEach(part => {
+                const lhs = part.split(/[=∈:]/)[0];
+                reg(lhs, entry);
+                // Also register bare symbol before function arg e.g. f_ch(ν) -> f_ch
+                const bare = lhs.replace(/\([^)]*\)\s*$/, '');
+                if (bare && bare !== lhs) reg(bare, entry);
+              });
+            });
+          } else {
+            const parts = (c0.textContent || '').replace(/\$/g, '').split(/[,，、;]/);
+            parts.forEach(p => {
+              const lhs = p.split(/[=∈:]/)[0];
+              reg(normLatexAlias(lhs), entry);
+            });
+          }
+        }
+        if (entry.explicitKeys) {
+          entry.explicitKeys.split(',').forEach(alias => {
+            const nk = normLatexAlias(alias);
+            if (nk) reg(nk, entry);
+          });
+        }
+      });
+      return kMap;
+    }
+
+    function bindRenderedKatexSymbols() {
+      if (!allEntries.length) return;
+      const kMap = buildKatexSymMap();
+      if (!kMap.size) return;
+      const scope = document.querySelector('.article-main') || document.body;
+
+      function attach(nodes, entry) {
+        nodes.forEach(n => {
+          n.classList.add('pdr-ksym');
+          n.addEventListener('mouseenter', () => openPopForEntry(nodes[0], entry, '', '', nodes));
+          n.addEventListener('mouseleave', scheduleClose);
+          n.addEventListener('click', (ev) => {
+            const sel = window.getSelection();
+            if (sel && !sel.isCollapsed) return;
+            ev.stopPropagation();
+            if (activeRef === nodes) closePop();
+            else openPopForEntry(nodes[0], entry, '', '', nodes);
+          });
+        });
+      }
+
+      const SKIP_CLS = ['strut', 'mspace', 'mbin', 'mrel', 'mopen', 'mclose', 'mpunct', 'mop'];
+      function hasSkipCls(el) {
+        for (let i = 0; i < SKIP_CLS.length; i++) {
+          if (el.classList.contains(SKIP_CLS[i])) return true;
+        }
+        return false;
+      }
+
+      function scanEl(parent, inSubSup) {
+        const kids = Array.from(parent.children);
+        for (let i = 0; i < kids.length; i++) {
+          const ch = kids[i];
+          if (hasSkipCls(ch) || ch.classList.contains('mathbb')) continue;
+          const isMord = ch.classList.contains('mord');
+          // 1. Check 2-sibling multi-token symbol first (e.g. \Delta\sigma)
+          if (!inSubSup && isMord && i + 1 < kids.length && kids[i + 1].classList.contains('mord') && !kids[i + 1].classList.contains('mathbb')) {
+            const k2 = normMathKey((ch.textContent || '') + (kids[i + 1].textContent || ''));
+            if (k2.length >= 2 && kMap.has(k2)) {
+              attach([ch, kids[i + 1]], kMap.get(k2));
+              i++;
+              continue;
+            }
+          }
+          // 2. Check single .mord token (longest match: composite f_ch matched before recursing into f)
+          if (isMord) {
+            const k1 = normMathKey(ch.textContent || '');
+            // Protect subscript/superscript single-letter indices (e.g. b in f_b) from false triggers
+            if (k1 && !(inSubSup && k1.length <= 1) && kMap.has(k1)) {
+              attach([ch], kMap.get(k1));
+              continue;
+            }
+          }
+          // 3. Recurse deeper into fractions, roots, groups, and scripts
+          if (ch.children && ch.children.length) {
+            scanEl(ch, inSubSup || ch.classList.contains('msupsub'));
+          }
+        }
+      }
+
+      scope.querySelectorAll('.katex').forEach(kEl => {
+        if (kEl.dataset.pdrSymBound) return;
+        if (kEl.closest('table[data-sym-table], [data-sym], .pdr-sym-pop, .pdr-sym-float')) return;
+        const kh = kEl.querySelector('.katex-html');
+        if (!kh) return;
+        kEl.dataset.pdrSymBound = '1';
+        scanEl(kh, false);
+      });
+    }
+
+    window.addEventListener('load', () => {
+      bindRenderedKatexSymbols();
+      setTimeout(bindRenderedKatexSymbols, 450);
+    });
+    setTimeout(bindRenderedKatexSymbols, 250);
+
+    // Pinnable, Draggable Floating Symbol Cheat-Sheet (auto-mounted when table[data-sym-table] exists)
+    const primarySymTable = symTables[0] || null;
+    let floatPanel = null;
+    let floatBtnMh = null;
+
+    function clampFloatPos(panel, left, top) {
+      const pw = panel.offsetWidth || 380;
+      const ph = panel.offsetHeight || 60;
+      return {
+        x: Math.max(8, Math.min(left, window.innerWidth - pw - 8)),
+        y: Math.max(8, Math.min(top, window.innerHeight - ph - 8)),
+      };
+    }
+
+    function openSymbolFloat() {
+      if (!primarySymTable) return;
+      if (floatPanel) {
+        floatPanel.hidden = false;
+        floatPanel.classList.remove('is-min');
+        if (floatBtnMh) floatBtnMh.classList.add('is-accent');
+        return;
+      }
+
+      floatPanel = document.createElement('div');
+      floatPanel.className = 'pdr-sym-float';
+      floatPanel.setAttribute('role', 'dialog');
+      floatPanel.setAttribute('aria-label', ui.symFloatTitle);
+
+      const head = document.createElement('div');
+      head.className = 'pdr-sf-head';
+      const title = document.createElement('span');
+      title.className = 'pdr-sf-title';
+      title.textContent = ui.symFloatTitle;
+      const acts = document.createElement('span');
+      acts.className = 'pdr-sf-actions';
+
+      const bMin = document.createElement('button');
+      bMin.type = 'button';
+      bMin.className = 'pdr-sf-btn';
+      bMin.textContent = '—';
+      bMin.title = ui.symMin;
+      bMin.setAttribute('aria-label', ui.symMin);
+      bMin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        floatPanel.classList.toggle('is-min');
+        bMin.textContent = floatPanel.classList.contains('is-min') ? '▢' : '—';
+      });
+
+      const bClose = document.createElement('button');
+      bClose.type = 'button';
+      bClose.className = 'pdr-sf-btn';
+      bClose.textContent = '×';
+      bClose.title = ui.closeAria;
+      bClose.setAttribute('aria-label', ui.closeAria);
+      bClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        floatPanel.hidden = true;
+        if (floatBtnMh) floatBtnMh.classList.remove('is-accent');
+      });
+      acts.append(bMin, bClose);
+      head.append(title, acts);
+      floatPanel.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'pdr-sf-body';
+      const tblClone = primarySymTable.cloneNode(true);
+      tblClone.removeAttribute('id');
+      tblClone.removeAttribute('data-sym-table');
+      tblClone.removeAttribute('data-interactive');
+      tblClone.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+      if (typeof window.renderMathInElement === 'function' && tblClone.textContent.indexOf('$') !== -1) {
+        window.renderMathInElement(tblClone, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+          ],
+          ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'svg'],
+          throwOnError: false,
+        });
+      }
+      body.appendChild(tblClone);
+
+      const clonedRows = Array.from(tblClone.querySelectorAll('tbody tr'));
+      if (clonedRows.length >= 5) {
+        const sWrap = document.createElement('div');
+        sWrap.className = 'pdr-sf-search';
+        const sInp = document.createElement('input');
+        sInp.type = 'search';
+        sInp.placeholder = ui.symSearch;
+        sInp.setAttribute('aria-label', ui.symSearch);
+        sInp.addEventListener('input', () => {
+          const q = sInp.value.trim().toLowerCase();
+          clonedRows.forEach(r => {
+            r.hidden = !!(q && !r.textContent.toLowerCase().includes(q));
+          });
+        });
+        sWrap.appendChild(sInp);
+        floatPanel.appendChild(sWrap);
+      }
+      floatPanel.appendChild(body);
+      document.body.appendChild(floatPanel);
+
+      // Default unobtrusive bottom-right dock
+      const initLeft = Math.max(12, window.innerWidth - floatPanel.offsetWidth - 22);
+      const initTop = Math.max(72, window.innerHeight - floatPanel.offsetHeight - 22);
+      floatPanel.style.left = initLeft.toFixed(0) + 'px';
+      floatPanel.style.top = initTop.toFixed(0) + 'px';
+      if (floatBtnMh) floatBtnMh.classList.add('is-accent');
+
+      // Smooth clamped pointer dragging via header bar
+      let dragOn = false, sx = 0, sy = 0, ox = 0, oy = 0;
+      head.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || e.target.closest('button')) return;
+        dragOn = true;
+        sx = e.clientX;
+        sy = e.clientY;
+        const r = floatPanel.getBoundingClientRect();
+        ox = r.left;
+        oy = r.top;
+        head.classList.add('is-dragging');
+        head.setPointerCapture(e.pointerId);
+      });
+      head.addEventListener('pointermove', (e) => {
+        if (!dragOn) return;
+        const pos = clampFloatPos(floatPanel, ox + (e.clientX - sx), oy + (e.clientY - sy));
+        floatPanel.style.left = pos.x.toFixed(0) + 'px';
+        floatPanel.style.top = pos.y.toFixed(0) + 'px';
+      });
+      function stopDrag(e) {
+        if (!dragOn) return;
+        dragOn = false;
+        head.classList.remove('is-dragging');
+        if (e && head.hasPointerCapture && head.hasPointerCapture(e.pointerId)) {
+          head.releasePointerCapture(e.pointerId);
+        }
+      }
+      head.addEventListener('pointerup', stopDrag);
+      head.addEventListener('pointercancel', stopDrag);
+      window.addEventListener('resize', () => {
+        if (!floatPanel || floatPanel.hidden) return;
+        const r = floatPanel.getBoundingClientRect();
+        const pos = clampFloatPos(floatPanel, r.left, r.top);
+        floatPanel.style.left = pos.x.toFixed(0) + 'px';
+        floatPanel.style.top = pos.y.toFixed(0) + 'px';
+      }, { passive: true });
+    }
+
+    function toggleSymbolFloat() {
+      if (floatPanel && !floatPanel.hidden) {
+        floatPanel.hidden = true;
+        if (floatBtnMh) floatBtnMh.classList.remove('is-accent');
+      } else {
+        openSymbolFloat();
+      }
+    }
+
+    if (primarySymTable) {
+      // Entry 1: Quiet Masthead button so user can open symbol sheet from anywhere in the paper
+      if (mastheadTools) {
+        floatBtnMh = document.createElement('button');
+        floatBtnMh.type = 'button';
+        floatBtnMh.className = 'mh-btn';
+        floatBtnMh.textContent = ui.symFloatBtn;
+        floatBtnMh.title = ui.symFloatTitle;
+        floatBtnMh.addEventListener('click', toggleSymbolFloat);
+        mastheadTools.prepend(floatBtnMh);
+      }
+      // Entry 2: Quiet pin button on the symbol table card itself
+      const symWrap = primarySymTable.closest('.table-wrap');
+      if (symWrap) {
+        const pinBtn = document.createElement('button');
+        pinBtn.type = 'button';
+        pinBtn.className = 'tbl-btn';
+        pinBtn.textContent = ui.symPinBtn;
+        pinBtn.addEventListener('click', openSymbolFloat);
+        const existingTools = symWrap.querySelector('.tbl-tools');
+        if (existingTools) {
+          existingTools.appendChild(pinBtn);
+        } else {
+          const pinBar = document.createElement('div');
+          pinBar.className = 'sym-pin-bar';
+          pinBar.appendChild(pinBtn);
+          symWrap.insertBefore(pinBar, primarySymTable);
+        }
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closePop();
+        if (floatPanel && !floatPanel.hidden) {
+          floatPanel.hidden = true;
+          if (floatBtnMh) floatBtnMh.classList.remove('is-accent');
+        }
+      }
+    });
+    document.addEventListener('click', (e) => {
+      if (!pop) return;
+      const inActive = Array.isArray(activeRef) ? activeRef.includes(e.target) : (e.target === activeRef);
+      if (!pop.contains(e.target) && !inActive) closePop();
+    });
   })();
 
   // 5. Declarative Flowchart Stepper & Proportional Flow Dots (.fig-steps)
@@ -833,15 +1229,26 @@
       window.addEventListener('beforeprint', () => { stop(); show(n - 1, true); });
     });
 
-    // Proportional Flow Dots (pre-sampled LUT + 30fps cap + viewport & tab-hidden pause)
+    // Proportional Flow Dots (auto-layered behind node cards + pre-sampled LUT + 30fps cap)
     if (!prefersReducedMotion && typeof IntersectionObserver !== 'undefined') {
       document.querySelectorAll('svg').forEach(svg => {
-        const layer = svg.querySelector('.flow-dots');
         const routeEls = Array.from(svg.querySelectorAll('path[data-flow]'));
-        if (!layer || !routeEls.length) return;
+        if (!routeEls.length) return;
+        let layer = svg.querySelector('.flow-dots');
+        if (!layer) {
+          layer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          layer.setAttribute('class', 'flow-dots');
+          layer.setAttribute('aria-hidden', 'true');
+          svg.appendChild(layer);
+        }
+        // Keep flow dots BEHIND node cards so particles only travel along visible wires and never block card text
+        const firstCard = svg.querySelector('.svg-node, rect.d-teal, rect.d-sage, rect.d-ochre, rect.d-terra, rect.d-card');
+        if (firstCard && firstCard.parentNode === svg) {
+          svg.insertBefore(layer, firstCard);
+        }
         const stepper = svg.closest('.fig-steps');
         const SAMPLES = 96;
-        const routes = routeEls.map(p => {
+        const routes = routeEls.map((p, ri) => {
           const len = p.getTotalLength ? p.getTotalLength() : 0;
           if (len <= 10) return null;
           const lut = new Float32Array((SAMPLES + 1) * 2);
@@ -852,10 +1259,11 @@
           }
           return {
             len: len,
+            speed: Math.min(0.14, Math.max(0.055, len / 700)),
             lut: lut,
-            every: Math.max(300, Number(p.getAttribute('data-every')) || 1200),
+            every: Math.max(400, Number(p.getAttribute('data-every')) || 1250),
             cls: 'flow-dot ' + (p.getAttribute('data-flow') || 'teal'),
-            next: 0,
+            next: ri * 260,
           };
         }).filter(Boolean);
         if (!routes.length) return;
@@ -885,7 +1293,7 @@
             if (t >= r.next) {
               r.next = t + r.every;
               const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-              c.setAttribute('r', '3.5');
+              c.setAttribute('r', '3.3');
               c.setAttribute('class', r.cls);
               c.setAttribute('cx', '0');
               c.setAttribute('cy', '0');
@@ -895,7 +1303,7 @@
             }
           }
           dots = dots.filter(d => {
-            const frac = ((t - d.t0) * 0.16) / d.r.len;
+            const frac = ((t - d.t0) * d.r.speed) / d.r.len;
             if (frac >= 1) { d.c.remove(); return false; }
             const pos = frac * SAMPLES;
             const i0 = pos | 0;
@@ -1269,7 +1677,7 @@
 
     function unwrapHighlights() {
       article.querySelectorAll('.pdr-hl-katex').forEach(el => {
-        el.classList.remove('pdr-hl-katex', 'is-ask', 'is-linked');
+        el.classList.remove('pdr-hl-katex', 'is-ask', 'is-linked', 'is-hl', 'hl-amber', 'hl-sage', 'hl-rose');
         delete el.dataset.noteId;
       });
       article.querySelectorAll('mark.pdr-hl').forEach(mk => {
@@ -1280,6 +1688,12 @@
         parent.normalize();
       });
     }
+
+    const HL_COLORS = [
+      { key: 'amber', cls: 'hl-amber', title: ui.hlAmber, pill: 'pill-ochre' },
+      { key: 'sage', cls: 'hl-sage', title: ui.hlSage, pill: 'pill-sage' },
+      { key: 'rose', cls: 'hl-rose', title: ui.hlRose, pill: 'pill-terra' },
+    ];
 
     function highlightNote(note) {
       if (!note.quote || note.quote.length < 2) return null;
@@ -1313,10 +1727,13 @@
         else cur.end = seg.offset + 1;
       }
 
+      const hlExtra = note.kind === 'ask'
+        ? ['is-ask']
+        : (note.kind === 'hl' ? ['is-hl', 'hl-' + (note.color || 'amber')] : []);
+
       let firstEl = null;
       katexHits.forEach(ks => {
-        ks.classList.add('pdr-hl-katex');
-        if (note.kind === 'ask') ks.classList.add('is-ask');
+        ks.classList.add('pdr-hl-katex', ...hlExtra);
         ks.dataset.noteId = note.id;
         if (!firstEl) firstEl = ks;
       });
@@ -1327,7 +1744,7 @@
           r.setStart(textNode, span.start);
           r.setEnd(textNode, span.end);
           const mk = document.createElement('mark');
-          mk.className = 'pdr-hl' + (note.kind === 'ask' ? ' is-ask' : '');
+          mk.className = ['pdr-hl', ...hlExtra].join(' ');
           mk.dataset.noteId = note.id;
           r.surroundContents(mk);
           firstEl = mk;
@@ -1386,8 +1803,74 @@
       if (!marginRaf) marginRaf = requestAnimationFrame(layoutMarginCards);
     }
 
+    let hlPop = null;
+    function closeHlPop() { if (hlPop) { hlPop.remove(); hlPop = null; } }
+    function openHlPop(note, anchorEl) {
+      closeSelPop();
+      closeHlPop();
+      hlPop = document.createElement('div');
+      hlPop.className = 'pdr-hl-pop';
+
+      HL_COLORS.forEach(c => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'pdr-hl-dot ' + c.cls + ((note.color || 'amber') === c.key ? ' is-current' : '');
+        dot.title = c.title;
+        dot.setAttribute('aria-label', c.title);
+        dot.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          note.color = c.key;
+          closeHlPop();
+          persistAndRender();
+        });
+        hlPop.appendChild(dot);
+      });
+
+      const sep = document.createElement('span');
+      sep.className = 'pdr-pop-sep';
+      hlPop.appendChild(sep);
+
+      const bAdd = document.createElement('button');
+      bAdd.type = 'button';
+      bAdd.textContent = ui.hlAddNote;
+      bAdd.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const r = anchorEl.getBoundingClientRect();
+        closeHlPop();
+        openComposer({
+          kind: 'note',
+          ctx: note.ctx,
+          quote: note.quote,
+          targetId: note.targetId,
+          anchorBlk: note.anchorBlk,
+          anchorRect: r,
+          upgradeId: note.id,
+        });
+      });
+
+      const bDel = document.createElement('button');
+      bDel.type = 'button';
+      bDel.textContent = ui.del;
+      bDel.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        notes = notes.filter(x => x.id !== note.id);
+        closeHlPop();
+        persistAndRender();
+      });
+
+      hlPop.append(bAdd, bDel);
+      document.body.appendChild(hlPop);
+      const rect = anchorEl.getBoundingClientRect();
+      const sw = hlPop.offsetWidth;
+      const left = Math.max(10, Math.min(rect.left + window.scrollX + rect.width / 2 - sw / 2, window.scrollX + window.innerWidth - sw - 10));
+      const top = Math.max(8, rect.top + window.scrollY - hlPop.offsetHeight - 8);
+      hlPop.style.left = left.toFixed(0) + 'px';
+      hlPop.style.top = top.toFixed(0) + 'px';
+    }
+
     function renderMarginalia() {
       unwrapHighlights();
+      closeHlPop();
       marginEntries = [];
       if (rail) rail.innerHTML = '';
       if (!notes.length) return;
@@ -1400,6 +1883,17 @@
           (n.targetId ? document.getElementById(n.targetId) : null);
 
         const hls = article.querySelectorAll('[data-note-id="' + n.id + '"]');
+        if (n.kind === 'hl') {
+          // Pure color highlights stay inline (no right-margin clutter); click opens recolor/upgrade/delete bar
+          hls.forEach(el => {
+            el.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              openHlPop(n, el);
+            });
+          });
+          return;
+        }
+
         hls.forEach(el => {
           el.addEventListener('mouseenter', () => setLinked(n.id, true, n.kind === 'ask'));
           el.addEventListener('mouseleave', () => setLinked(n.id, false, n.kind === 'ask'));
@@ -1536,8 +2030,9 @@
       };
     }
 
-    function openComposer({ kind, ctx, quote, targetId, anchorBlk, anchorRect }) {
+    function openComposer({ kind, ctx, quote, targetId, anchorBlk, anchorRect, upgradeId }) {
       closeSelPop();
+      closeHlPop();
       closeNotePop();
 
       let curKind = kind || 'note';
@@ -1599,16 +2094,24 @@
       function doSave() {
         const txt = ta.value.trim();
         if (!txt) { closeNotePop(); return; }
-        notes.push({
-          id: 'n_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-          kind: curKind,
-          ctx: ctx,
-          quote: quote,
-          text: txt,
-          targetId: targetId,
-          anchorBlk: anchorBlk || '',
-          ts: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        });
+        const existing = upgradeId ? notes.find(x => x.id === upgradeId) : null;
+        if (existing) {
+          existing.kind = curKind;
+          existing.text = txt;
+          delete existing.color;
+          existing.ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        } else {
+          notes.push({
+            id: 'n_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            kind: curKind,
+            ctx: ctx,
+            quote: quote,
+            text: txt,
+            targetId: targetId,
+            anchorBlk: anchorBlk || '',
+            ts: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          });
+        }
         closeNotePop();
         persistAndRender();
         showToast(ui.noteSaved);
@@ -1634,7 +2137,7 @@
     }
 
     function handleSelection(e) {
-      if (e && e.target && e.target.closest && e.target.closest('button, input, textarea, select, .pdr-sel-pop, .pdr-note-pop, .pdr-modal-overlay, .tbl-tools, .steps-bar, .margin-rail')) return;
+      if (e && e.target && e.target.closest && e.target.closest('button, input, textarea, select, .pdr-sel-pop, .pdr-hl-pop, .pdr-note-pop, .pdr-sym-pop, .pdr-sym-float, .pdr-modal-overlay, .tbl-tools, .steps-bar, .margin-rail')) return;
       setTimeout(() => {
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || !sel.rangeCount) { closeSelPop(); return; }
@@ -1656,8 +2159,43 @@
         const info = contextFromBlock(blk);
 
         closeSelPop();
+        closeHlPop();
         selPop = document.createElement('div');
         selPop.className = 'pdr-sel-pop';
+
+        // 1-click 3-color Morandi highlight swatches
+        HL_COLORS.forEach(c => {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = 'pdr-hl-dot ' + c.cls;
+          dot.title = c.title;
+          dot.setAttribute('aria-label', c.title);
+          dot.addEventListener('mousedown', (ev) => ev.preventDefault());
+          dot.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            notes.push({
+              id: 'h_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+              kind: 'hl',
+              color: c.key,
+              ctx: info.ctx,
+              quote: text,
+              text: '',
+              targetId: info.targetId,
+              anchorBlk: info.anchorBlk,
+              ts: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            });
+            try { window.getSelection().removeAllRanges(); } catch (_) {}
+            closeSelPop();
+            persistAndRender();
+            showToast(ui.hlAdded);
+          });
+          selPop.appendChild(dot);
+        });
+
+        const sep = document.createElement('span');
+        sep.className = 'pdr-pop-sep';
+        selPop.appendChild(sep);
+
         const bNote = document.createElement('button');
         bNote.type = 'button';
         bNote.textContent = ui.selNote;
@@ -1690,7 +2228,8 @@
     });
     document.addEventListener('mousedown', (e) => {
       if (selPop && !selPop.contains(e.target)) closeSelPop();
-      if (notePop && !notePop.contains(e.target) && !e.target.closest('.fig-note-btn, .pdr-sel-pop')) closeNotePop();
+      if (hlPop && !hlPop.contains(e.target)) closeHlPop();
+      if (notePop && !notePop.contains(e.target) && !e.target.closest('.fig-note-btn, .pdr-sel-pop, .pdr-hl-pop')) closeNotePop();
     });
 
     window.addEventListener('load', () => {
@@ -1704,15 +2243,17 @@
     function buildNotesMarkdown() {
       const lines = ['# ' + (document.title || 'Paper Reading Notes'), ''];
       notes.forEach((item, i) => {
-        const tag = item.kind === 'ask' ? ui.tagAsk : ui.tagNote;
+        const tag = item.kind === 'ask' ? ui.tagAsk : (item.kind === 'hl' ? ui.tagHl : ui.tagNote);
         lines.push('## ' + (i + 1) + '. [' + tag + '] ' + item.ctx + ' (' + item.ts + ')');
         if (item.quote) lines.push('> ' + item.quote);
-        lines.push('', item.text, '');
+        if (item.text) lines.push('', item.text);
+        lines.push('');
       });
       return lines.join('\n');
     }
 
     let modalOverlay = null;
+    let modalFilter = 'all';
     function openNotesModal() {
       if (!modalOverlay) {
         modalOverlay = document.createElement('div');
@@ -1723,6 +2264,11 @@
           '<div class="pdr-modal">' +
             '<div class="pdr-modal-head">' +
               '<span class="pdr-modal-title">' + ui.notesModalTitle + '</span>' +
+              '<div class="pdr-modal-tabs" id="pdr-nm-tabs" hidden>' +
+                '<button type="button" class="pdr-modal-tab is-active" data-nm-tab="all">' + ui.tabAll + '</button>' +
+                '<button type="button" class="pdr-modal-tab" data-nm-tab="notes">' + ui.tabNotes + '</button>' +
+                '<button type="button" class="pdr-modal-tab" data-nm-tab="hl">' + ui.tabHls + '</button>' +
+              '</div>' +
               '<button type="button" class="btn" id="pdr-nm-close">' + ui.close + '</button>' +
             '</div>' +
             '<div class="pdr-modal-body" id="pdr-nm-body"></div>' +
@@ -1737,6 +2283,13 @@
         document.body.appendChild(modalOverlay);
         modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeNotesModal(); });
         document.getElementById('pdr-nm-close').addEventListener('click', closeNotesModal);
+        document.getElementById('pdr-nm-tabs').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-nm-tab]');
+          if (!btn) return;
+          modalFilter = btn.getAttribute('data-nm-tab') || 'all';
+          modalOverlay.querySelectorAll('[data-nm-tab]').forEach(b => b.classList.toggle('is-active', b === btn));
+          renderNotesModal();
+        });
         document.getElementById('pdr-nm-copy').addEventListener('click', () => {
           copyText(buildNotesMarkdown()).then(() => showToast(ui.mdCopied));
         });
@@ -1764,9 +2317,21 @@
     }
     function renderNotesModal() {
       const body = document.getElementById('pdr-nm-body');
+      const tabsEl = document.getElementById('pdr-nm-tabs');
       if (!body) return;
       body.innerHTML = '';
-      if (!notes.length) {
+      const hasHl = notes.some(x => x.kind === 'hl');
+      const hasWritten = notes.some(x => x.kind !== 'hl');
+      if (tabsEl) {
+        tabsEl.hidden = !(hasHl && hasWritten);
+        if (tabsEl.hidden) modalFilter = 'all';
+      }
+      const list = notes.filter(x => {
+        if (modalFilter === 'hl') return x.kind === 'hl';
+        if (modalFilter === 'notes') return x.kind !== 'hl';
+        return true;
+      });
+      if (!list.length) {
         const p = document.createElement('p');
         p.style.color = 'var(--muted)';
         p.style.margin = '0.4rem 0';
@@ -1774,15 +2339,26 @@
         body.appendChild(p);
         return;
       }
-      notes.forEach((item, idx) => {
+      list.forEach(item => {
         const card = document.createElement('div');
         card.className = 'pdr-note-item';
         const head = document.createElement('div');
         head.className = 'pdr-note-item-head';
         const left = document.createElement('span');
-        left.innerHTML = '<span class="pill ' + (item.kind === 'ask' ? 'pill-terra' : 'pill-teal') + '">' + (item.kind === 'ask' ? ui.tagAsk : ui.tagNote) + '</span> ' +
-          '<strong></strong>';
+        let pillCls = 'pill-teal';
+        let tagText = ui.tagNote;
+        if (item.kind === 'ask') {
+          pillCls = 'pill-terra';
+          tagText = ui.tagAsk;
+        } else if (item.kind === 'hl') {
+          const cObj = HL_COLORS.find(c => c.key === item.color) || HL_COLORS[0];
+          pillCls = cObj.pill;
+          tagText = cObj.title;
+        }
+        left.innerHTML = '<span class="pill ' + pillCls + '"></span> <strong></strong>';
+        left.querySelector('.pill').textContent = tagText;
         left.querySelector('strong').textContent = item.ctx;
+
         const right = document.createElement('span');
         right.style.display = 'inline-flex';
         right.style.gap = '0.35rem';
@@ -1800,12 +2376,31 @@
           });
           right.appendChild(bLoc);
         }
+        if (item.kind === 'hl') {
+          const bUp = document.createElement('button');
+          bUp.type = 'button';
+          bUp.className = 'tbl-btn';
+          bUp.textContent = ui.hlAddNote;
+          bUp.addEventListener('click', () => {
+            closeNotesModal();
+            openComposer({
+              kind: 'note',
+              ctx: item.ctx,
+              quote: item.quote,
+              targetId: item.targetId,
+              anchorBlk: item.anchorBlk,
+              anchorRect: null,
+              upgradeId: item.id,
+            });
+          });
+          right.appendChild(bUp);
+        }
         const bDel = document.createElement('button');
         bDel.type = 'button';
         bDel.className = 'tbl-btn';
         bDel.textContent = ui.del;
         bDel.addEventListener('click', () => {
-          notes.splice(idx, 1);
+          notes = notes.filter(x => x.id !== item.id);
           persistAndRender();
         });
         right.appendChild(bDel);
@@ -1818,10 +2413,12 @@
           q.textContent = item.quote;
           card.appendChild(q);
         }
-        const t = document.createElement('p');
-        t.className = 'pdr-note-item-text';
-        t.textContent = item.text;
-        card.appendChild(t);
+        if (item.text) {
+          const t = document.createElement('p');
+          t.className = 'pdr-note-item-text';
+          t.textContent = item.text;
+          card.appendChild(t);
+        }
         body.appendChild(card);
       });
     }
