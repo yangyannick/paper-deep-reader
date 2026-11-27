@@ -149,7 +149,7 @@ paper-deep-reader/
 ├── scripts/
 │   ├── fetch_paper.py                 # 零依赖拉取器（arXiv / OA DOI / PDF URL / Zotero 7+）
 │   ├── extract_pdf.py                 # PyMuPDF 文本提取与核验页 PNG 渲染
-│   ├── assemble_html.py               # 单文件 HTML 组装器（SVG 清理、ID 隔离与 --offline-katex）
+│   ├── assemble_html.py               # 单文件 HTML 组装器（SVG/原图内联压缩、ID 隔离与 --offline-katex）
 │   ├── qa_static.py                   # 静态质检脚本（公式、ID、交互绑定、套话、node --check）
 │   └── qa_browser_shots.py            # 跨平台无头浏览器 1440px 截图切片与 DOM 几何/运行时体检
 ├── docs/images/                       # README 展示截图

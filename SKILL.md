@@ -37,7 +37,7 @@ Always put intermediate files (extracted text, PDF page PNGs, plotting scripts, 
 ### Stage 1 · Source Grounding & Visual Fidelity Verification
 1. Verify once which Python executable has `pymupdf`, `matplotlib`, `numpy`, and `PIL`, then reuse that same interpreter for the entire run. Run `scripts/extract_pdf.py --pdf <paper.pdf> --out <workdir>` (defaults to `--pages all --dpi 150`), which extracts full text, writes `page_index.json`, prints a compact `PAGE_MAP`, and renders **every page** to PNG so no body prose, conclusion, footnote, or appendix is ever omitted. For un-redrawable original figures (photos/waveforms), use `--crop PAGE:x0,y0,x1,y1:filename` (`240 DPI`) instead of writing ad-hoc crop scripts.
 2. Visually inspect all body, conclusion, and appendix page PNGs in **one parallel batch** (or 2 batches for long papers) via `read_file` to verify every equation, symbol, table value, footnote, and figure caption. Only on long papers where `pdf_text.txt` confirms a page is **100% pure bibliography entries** (zero body prose, conclusions, footnotes, or appendix text) may you skip visually inspecting that pure-reference page; never read PNGs one by one.
-3. If the paper reports summary totals or grouped metrics across a table, write a brief Python assertion script to cross-check arithmetic consistency and compute key secondary metrics (e.g., absolute vs relative gaps, outlier sensitivity).
+3. Run **one upfront numeric grounding script** right after reading the pages to cross-check table arithmetic, compute exact worked-example numbers (so you never rewrite `body.html` later to fix micro-example values), and detect bounding boxes for any original figures that require high-DPI cropping.
 
 ### Stage 2 · Academic Monograph Synthesis & Silent Deep-Audit
 Read `references/academic-writing-guide.md` before drafting.
@@ -73,25 +73,34 @@ Three orthogonal visual tracks (all aligned to the Warm Paper Morandi palette in
    - Use **dual-panel** layout only for concise, low-density comparisons (≤8 categories per panel); **split dense charts (≥15 samples or dense annotated scatters) into separate full-width SVGs** with bridging prose between figures—never stack multiple figures back-to-back without explanatory text.
 3. **Zero-Dependency Self-Contained Assembly**:
    - Write the page body fragment (`body.html`) using semantic classes from `assets/theme-morandi.css`. `assets/widgets.js` automatically provides: Masthead Light/Dark theme (`Warm Paper` ↔ restrained `Midnight Slate`), font-size controls, and a pinnable draggable floating symbol sheet (`Σ 符号` / `📌 悬浮查看`), frameless left outline sidebar with collapsible `本篇插图` / `本篇表格` drawers and reading progress, bidirectional `data-ref` linking, automatic hover quick-cards on rendered KaTeX symbols (both `$$...$$` and `$...$`) backed by `<table data-sym-table>`, `.fig-steps` steppers & edge-only flow dots, `data-set-view` toggles, `<table data-interactive>` sorting/filtering/CSV (with `极值高亮` strictly honoring AI-declared `data-better="high"|"low"` columns), xref jump-back pill, 3-color 1-click inline highlighting plus cross-node/KaTeX-safe selection & figure notes rendered as aligned right-margin marginalia on wide screens (with filtered top-bar Markdown export), interactive 120fps vector Lightbox (preserving live `.fig-steps` stepping and `data-set-view` toggling while zoomed), and clean `@media print`.
-   - Run `scripts/assemble_html.py` to bundle CSS, JS, cleaned/ID-prefixed SVGs, and any optional `--extra-js` into one standalone `.html` file. Pass `--offline-katex` when the user requests 100% air-gapped offline KaTeX (caches and inlines WOFF2-only fonts once).
+   - Run `scripts/assemble_html.py` directly using `@@TOKEN@@` placeholders in `body.html`—never write ad-hoc base64-inlining scripts or spend turns inspecting `assemble_html.py`:
+     ```bash
+     python scripts/assemble_html.py --title "..." --body workdir/body.html --out output/paper.html \
+       --svg SVG_PLOT1=workdir/plot1.svg --img IMG_FIG1=workdir/crops/fig1.png [--extra-js workdir/custom_widgets.js] [--offline-katex]
+     ```
+     (`--svg` cleans & prefixes SVG IDs and rounds float decimals; `--img` auto-optimizes large PNGs to sharp WebP/PNG and embeds `data:` URIs; `--offline-katex` caches and inlines WOFF2-only KaTeX once.)
    - **Performance guardrails**: Never add render-blocking Google Fonts `<link>` tags or `backdrop-filter: blur(...)`; keep `ignoredTags: ['script','noscript','style','textarea','pre','code','svg']` in KaTeX auto-render; escape `<` as `&lt;` inside KaTeX math.
 
 ### Stage 4 · Dual-Layer QA & Delivery
-1. **Single-Command Assembly + Dual QA**: Chain `assemble_html.py` → `qa_static.py` → `qa_browser_shots.py` in one shell command (`assemble_html.py` automatically minifies inline CSS and rounds excessive SVG float decimals; `qa_browser_shots.py` runs an automated headless-Chrome DOM geometric audit—checking JS runtime errors, horizontal overflow, broken images, KaTeX errors, and diagram SVG text collisions/clipping/tiny labels—and captures `2000px`-tall `1440px` PNG slices). Fix every `FAIL` and reported geometric issue, inspect the slices in **one parallel `read_file` batch**, polish any visual issue, and re-verify once.
-2. **Deliver HTML only**: Output the standalone `.html` file without overwriting earlier versions. Do NOT export PDF unless the user explicitly asks for one.
+1. **Single-Command Assembly + Short-Circuit Dual QA**: Chain `assemble_html.py` → `qa_static.py output/paper.html` → (only if static QA passes!) `qa_browser_shots.py --html output/paper.html --out workdir/qa_shots` in one shell command (`qa_browser_shots.py` runs an automated headless-Chrome DOM geometric audit—checking JS runtime errors, horizontal overflow, broken images, KaTeX errors, and `.diag-svg` text collisions/clipping/tiny labels—and auto-fits the full page height into `2500px`-tall `1440px` PNG slices in one pass). Fix every `FAIL` and reported geometric issue, inspect the slices in **one parallel `read_file` batch**, polish any visual issue, and re-verify once.
+2. **Deliver HTML only**: Output the standalone `.html` file without overwriting earlier versions (combine final `update_steps` with your final reply—avoid an extra empty turn). Do NOT export PDF unless the user explicitly asks for one.
 
 ---
 
 ## Execution Speed & Browser Performance Guardrails
 
-- **Reuse built-in infrastructure, keep full creativity for paper-specific widgets**:
-  - Do NOT re-implement generic plumbing already built into `assets/widgets.js` (TOC/scroll-spy, Lightbox zoom, standard sortable/filterable/CSV tables via `table[data-interactive]`, symbol hover cards via `data-sym`, margin notes, or basic `.fig-steps` / `data-set-view` toggling).
-  - You remain **fully encouraged** to craft bespoke, creative domain-specific interactive visuals via `--extra-js` whenever a paper's core mechanism genuinely benefits from one (e.g., visual byte-lane animations, attention/matrix explorers, physical phase/parameter probes, or interactive state-machine traces)—with no arbitrary line cap; just keep outputs visually intuitive at a glance rather than raw text/Hex dumps or production-scale re-implementations.
-- **Minimize turn count via batching without compressing analytical depth**:
-  - Inspect page PNGs in parallel batches (skipping only 100% pure bibliography pages on long papers);
-  - Generate all Matplotlib charts in **1 consolidated Python script**, then inspect all preview PNGs in 1 parallel turn;
+- **Single-agent unified execution (avoid subagent bloat & rework)**:
+  - Run the entire workflow cleanly in one main agent thread—do **not** spawn parallel subagents for prose, charts, or custom JS (subagents duplicate PDF/context reads and inflate token cost).
+  - Use the **Morandi Native Layout Class Quick-Reference** in `references/diagram-and-layout-guide.md` directly so every grid/card renders cleanly on the first pass without reading `assets/theme-morandi.css` or reworking layouts after QA.
+- **Reuse built-in infrastructure, keep custom widgets focused**:
+  - Do NOT re-implement generic plumbing already built into `assets/widgets.js` (TOC/scroll-spy, Lightbox zoom, standard sortable/filterable/CSV tables via `table[data-interactive]`, automatic KaTeX symbol hover & draggable floating sheet via `table[data-sym-table]`, 3-color highlights & margin notes, or basic `.fig-steps` / `data-set-view` toggling).
+  - You remain **fully encouraged** to craft bespoke, creative domain-specific interactive visuals via `--extra-js` whenever a paper's core mechanism genuinely benefits from one (e.g., visual byte-lane animations, attention/matrix explorers, physical phase/parameter probes, or interactive state-machine traces)—with no arbitrary line cap; just keep them focused and visually intuitive rather than sprawling mini web-apps or raw text/Hex dumps.
+- **Minimize turn count & rework without compressing analytical depth**:
+  - Inspect page PNGs in parallel batches without extra `ls` turns (`extract_pdf.py` already prints `PAGE_MAP` for `pdf_pages/page_01.png .. page_NN.png`), and do not spend turns reading `assets/theme-morandi.css` or `scripts/assemble_html.py` unless debugging;
+  - Consolidate table checks, worked-example calculations, and figure crop detection into **1 upfront Python script**;
+  - Generate all Matplotlib charts in **1 consolidated script** and crop only genuinely un-redrawable original figures (typically 0–3 crops); when polishing after preview inspection, apply **targeted `edit_file` tweaks** (never rewrite the entire plotting script from scratch) and keep to at most 1 polish pass;
   - Write `body.html` in 1 write for short/medium papers, or 2–3 logical section chunks for long papers so deep analysis and worked examples are never truncated (avoid 10+ tiny incremental edits);
-  - Chain assembly + static QA + browser audit/screenshot capture in 1 command.
+  - Chain assembly + static QA + short-circuit browser audit/screenshot capture in 1 command.
 - **Prevent browser jank on dense figures**: For Matplotlib scatter/waveform plots with >500 points, pass `rasterized=True` on the dense data artist so axes/text stay sharp SVG while avoiding thousands of slow SVG DOM nodes; keep `data-flow` dots to at most 1 flowchart per page.
 
 ---

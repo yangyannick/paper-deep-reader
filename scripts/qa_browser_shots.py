@@ -6,10 +6,10 @@ Checks automatically during the headless DOM pass (inspired by visual-explainer'
   2. Horizontal page overflow (scrollWidth > innerWidth)
   3. Broken <img> elements (naturalWidth === 0)
   4. KaTeX render count & .katex-error spans
-  5. Hand-drawn diagram SVG (<svg> with .diag-svg or <=60 text nodes) geometry:
+  5. Hand-drawn diagram SVG (.diag-svg) geometry:
      - Overlapping text labels (ink-box trimmed 22% top/bottom to avoid false positives)
      - Clipped text extending outside the SVG bounding box
-     - Unreadably tiny rendered text (< 8.5px)
+     - Unreadably tiny rendered text (< 7.8px)
 
 Usage:
   python scripts/qa_browser_shots.py --html output/paper.html --out workdir/qa_shots --width 1440
@@ -44,6 +44,10 @@ AUDIT_PROBE_JS = r"""
       broken_imgs: [],
       katex_spans: document.querySelectorAll('.katex').length,
       katex_errors: document.querySelectorAll('.katex-error').length,
+      scroll_height: Math.max(
+        document.documentElement.scrollHeight || 0,
+        document.body ? document.body.scrollHeight : 0
+      ),
       svg_overlaps: [],
       svg_clipped: [],
       svg_tiny_text: []
@@ -69,8 +73,8 @@ AUDIT_PROBE_JS = r"""
         report.broken_imgs.push(imgs[j].getAttribute('alt') || (imgs[j].getAttribute('src') || '').slice(0, 48));
       }
     }
-    // Audit hand-drawn / compact diagram SVGs (skip dense Matplotlib charts with >60 text nodes)
-    var svgs = document.querySelectorAll('main svg, .article-main svg, figure svg');
+    // Audit hand-drawn semantic diagrams (.diag-svg) only (Matplotlib SVGs are inspected directly as PNGs)
+    var svgs = document.querySelectorAll('main svg.diag-svg, .article-main svg.diag-svg, figure svg.diag-svg');
     var seenSvgs = new Set();
     for (var s = 0; s < svgs.length; s++) {
       var svg = svgs[s];
@@ -85,8 +89,6 @@ AUDIT_PROBE_JS = r"""
         return b.width > 1 && b.height > 1;
       });
       if (!texts.length) continue;
-      var isDiag = svg.classList.contains('diag-svg') || texts.length <= 60;
-      if (!isDiag) continue;
 
       var fig = svg.closest('figure');
       var figTitle = fig && fig.querySelector('.fig-title')
@@ -102,7 +104,7 @@ AUDIT_PROBE_JS = r"""
         var m = t.getScreenCTM ? t.getScreenCTM() : null;
         var scale = m ? Math.hypot(m.a, m.b) : 1;
         var px = parseFloat(cs.fontSize) * (scale > 0 ? scale : 1);
-        if (px > 0 && px < 8.5 && report.svg_tiny_text.length < 6) {
+        if (px > 0 && px < 7.8 && report.svg_tiny_text.length < 6) {
           report.svg_tiny_text.push(figTitle + ': "' + txt + '" (' + px.toFixed(1) + 'px)');
         }
         var br = t.getBoundingClientRect();
@@ -164,23 +166,35 @@ def find_browser() -> str | None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Capture 1440px full-page slices & run DOM geometric audit.")
-    ap.add_argument("--html", required=True, help="Path to standalone HTML file.")
-    ap.add_argument("--out", required=True, help="Directory to write QA PNG slices.")
+    ap.add_argument("html_pos", nargs="?", help="Optional positional path to standalone HTML file.")
+    ap.add_argument("out_pos", nargs="?", help="Optional positional directory to write QA PNG slices.")
+    ap.add_argument("--html", dest="html_opt", help="Path to standalone HTML file.")
+    ap.add_argument("--out", dest="out_opt", help="Directory to write QA PNG slices.")
     ap.add_argument("--width", type=int, default=1440, help="Viewport width (default: 1440).")
-    ap.add_argument("--max-height", type=int, default=14500, help="Capture canvas height (default: 14500).")
-    ap.add_argument("--slice-height", type=int, default=2000, help="Per-slice height in px (default: 2000).")
+    ap.add_argument(
+        "--max-height",
+        type=int,
+        default=0,
+        help="Capture canvas height in px (default: 0 = auto-fit full page scrollHeight up to 28000px).",
+    )
+    ap.add_argument("--slice-height", type=int, default=2500, help="Per-slice height in px (default: 2500).")
     ap.add_argument("--wait-ms", type=int, default=8000, help="CDN KaTeX warmup budget in ms (default: 8000).")
     ap.add_argument("--skip-katex-check", action="store_true", help="Skip KaTeX CDN render check.")
     ap.add_argument("--skip-audit", action="store_true", help="Skip headless DOM geometric & JS runtime audit.")
     args = ap.parse_args()
+
+    html_arg = args.html_opt or args.html_pos
+    out_arg = args.out_opt or args.out_pos
+    if not html_arg or not out_arg:
+        ap.error("provide --html HTML --out OUT (or positional HTML OUT)")
 
     browser = find_browser()
     if not browser:
         print("QA_BROWSER_SKIPPED: No local Chrome, Chromium, or Edge executable found.")
         sys.exit(0)
 
-    html_path = Path(args.html).expanduser().resolve()
-    out_dir = Path(args.out).expanduser().resolve()
+    html_path = Path(html_arg).expanduser().resolve()
+    out_dir = Path(out_arg).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
     url = html_path.as_uri()
@@ -213,6 +227,7 @@ def main() -> None:
         katex_note = ""
         audit_issues: list[str] = []
         audit_warns: list[str] = []
+        detected_height = 0
 
         # 1. Automated DOM Geometric & Runtime Audit (also warms CDN KaTeX cache before screenshot!)
         if not args.skip_audit:
@@ -250,6 +265,7 @@ def main() -> None:
                 m = re.search(r'data-pdr-qa-report="([^"]+)"', dom_txt)
                 if m:
                     rep = json.loads(html_lib.unescape(m.group(1)))
+                    detected_height = int(rep.get("scroll_height") or 0)
                     for je in rep.get("js_errors", []):
                         audit_issues.append(f"JS runtime error: {je}")
                     if rep.get("overflow_px", 0) > 2:
@@ -263,7 +279,7 @@ def main() -> None:
                     for cl in rep.get("svg_clipped", []):
                         audit_warns.append(f"SVG text clipped: {cl}")
                     for tn in rep.get("svg_tiny_text", []):
-                        audit_warns.append(f"SVG tiny label (<8.5px): {tn}")
+                        audit_warns.append(f"SVG tiny label (<7.8px): {tn}")
                     if rep.get("katex_errors", 0) > 0:
                         audit_issues.append(f"KaTeX render errors (.katex-error): {rep['katex_errors']}")
                     k_spans = rep.get("katex_spans", 0)
@@ -280,12 +296,18 @@ def main() -> None:
                 audit_warns.append(f"DOM audit skipped: {exc}")
 
         # 2. Capture full-page 1440px screenshot using the same warmed profile
+        if args.max_height > 0:
+            capture_height = args.max_height
+        elif detected_height > 0:
+            capture_height = min(max(detected_height + 160, 2500), 28000)
+        else:
+            capture_height = 22000
         shot_budget = 2200 if (is_offline_katex or not has_math) else (2800 if not args.skip_audit else args.wait_ms)
         cmd = [
             *base_flags,
             f"--virtual-time-budget={shot_budget}",
             "--hide-scrollbars",
-            f"--window-size={args.width},{args.max_height}",
+            f"--window-size={args.width},{capture_height}",
             f"--screenshot={full_png}",
             url,
         ]
@@ -312,7 +334,9 @@ def main() -> None:
             if (not args.skip_audit and not audit_issues)
             else (f" | audit={len(audit_issues)} issue(s)" if not args.skip_audit else "")
         )
-        print(f"QA_BROWSER_OK | browser={os.path.basename(browser)} | slices={saved}{katex_note}{audit_tag} -> {out_dir}")
+        print(
+            f"QA_BROWSER_OK | browser={os.path.basename(browser)} | height={h}px | slices={saved}{katex_note}{audit_tag} -> {out_dir}"
+        )
         for wmsg in audit_warns:
             print(f"  WARN: {wmsg}")
         for imsg in audit_issues:

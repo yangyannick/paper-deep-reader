@@ -10,7 +10,7 @@ Usage:
     --body workdir/body.html \
     --out output/paper-deep-read.html \
     --svg SVG_PLOT1=workdir/plot1.svg \
-    --svg SVG_PLOT2=workdir/plot2.svg \
+    --img IMG_FIG1=workdir/crops/fig1.png \
     --extra-js workdir/custom_widgets.js \
     [--offline-katex] [--no-minify]
 """
@@ -18,10 +18,16 @@ import argparse
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import html
+import io
 import re
 import time
 import urllib.request
 from pathlib import Path
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DIR = SKILL_ROOT / "assets"
@@ -108,6 +114,47 @@ def clean_and_prefix_svg(svg_text: str, prefix: str, optimize: bool = True) -> s
     return svg_text.strip()
 
 
+def encode_image_data_uri(img_path: Path, optimize: bool = True) -> str:
+    """Read a raster image (PNG/JPG/WebP) and return a compact base64 data URI."""
+    raw = img_path.read_bytes()
+    ext = img_path.suffix.lower().lstrip(".")
+    mime_map = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp", "gif": "image/gif"}
+    mime = mime_map.get(ext, "image/png")
+
+    if optimize and Image is not None and ext in ("png", "bmp", "tif", "tiff") and len(raw) > 180_000:
+        try:
+            with Image.open(io.BytesIO(raw)) as im:
+                # Prefer sharp high-quality WebP when substantially smaller than raw PNG
+                webp_buf = io.BytesIO()
+                im.save(webp_buf, format="WEBP", quality=88, method=4)
+                webp_bytes = webp_buf.getvalue()
+                if len(webp_bytes) < len(raw) * 0.78:
+                    raw, mime = webp_bytes, "image/webp"
+                else:
+                    png_buf = io.BytesIO()
+                    im.save(png_buf, format="PNG", optimize=True)
+                    png_bytes = png_buf.getvalue()
+                    if len(png_bytes) < len(raw):
+                        raw, mime = png_bytes, "image/png"
+        except Exception:
+            pass
+
+    b64 = base64.b64encode(raw).decode("ascii")
+    return f"data:{mime};base64,{b64}"
+
+
+def replace_asset_token(body_html: str, token: str, payload: str) -> tuple[str, bool]:
+    bare = token.strip("@").strip()
+    primary = token if token.startswith("@@") else f"@@{bare}@@"
+    if primary in body_html:
+        return body_html.replace(primary, payload), True
+    # Graceful fallback if caller wrote HTML comment token <!-- TOKEN -->
+    comment_re = re.compile(rf"<!--\s*{re.escape(bare)}\s*-->")
+    if comment_re.search(body_html):
+        return comment_re.sub(lambda _: payload, body_html), True
+    return body_html, False
+
+
 _PREFERRED_MIRROR: list[str] = []
 
 
@@ -176,7 +223,8 @@ def main() -> None:
     ap.add_argument("--lang", default="zh-CN", help="HTML lang attribute (default: zh-CN).")
     ap.add_argument("--body", required=True, help="Path to HTML body fragment (content inside <body>).")
     ap.add_argument("--out", required=True, help="Output standalone HTML path.")
-    ap.add_argument("--svg", action="append", default=[], help="Token replacement as TOKEN=path/to/file.svg")
+    ap.add_argument("--svg", action="append", default=[], help="SVG token replacement as TOKEN=path/to/file.svg (replaces @@TOKEN@@).")
+    ap.add_argument("--img", action="append", default=[], help="Raster image data-URI replacement as TOKEN=path/to/crop.png (replaces @@TOKEN@@, auto-optimizes large PNGs).")
     ap.add_argument("--extra-css", help="Optional path to page-specific incremental CSS.")
     ap.add_argument("--extra-js", help="Optional path to page-specific JS (e.g. live formula slider).")
     ap.add_argument(
@@ -204,14 +252,28 @@ def main() -> None:
         if extra_css.strip():
             extra_css = minify_css(extra_css)
 
+    unmatched_tokens: list[str] = []
     for idx, spec in enumerate(args.svg, start=1):
         if "=" not in spec:
             raise ValueError(f"--svg must be TOKEN=PATH, got: {spec}")
         token, svg_path = spec.split("=", 1)
         prefix = f"s{idx}_"
         cleaned = clean_and_prefix_svg(Path(svg_path).read_text(encoding="utf-8"), prefix, optimize=optimize)
-        placeholder = token if token.startswith("@@") else f"@@{token}@@"
-        body_html = body_html.replace(placeholder, cleaned)
+        body_html, matched = replace_asset_token(body_html, token, cleaned)
+        if not matched:
+            unmatched_tokens.append(token)
+
+    for spec in args.img:
+        if "=" not in spec:
+            raise ValueError(f"--img must be TOKEN=PATH, got: {spec}")
+        token, img_path = spec.split("=", 1)
+        data_uri = encode_image_data_uri(Path(img_path), optimize=optimize)
+        body_html, matched = replace_asset_token(body_html, token, data_uri)
+        if not matched:
+            unmatched_tokens.append(token)
+
+    if unmatched_tokens:
+        print(f"WARN: Unmatched asset token(s) not found in body HTML: {unmatched_tokens}")
 
     katex_body_js = ""
     if args.offline_katex:

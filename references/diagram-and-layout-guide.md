@@ -144,8 +144,8 @@ Add `data-interactive` to any clean benchmark/results `<table>` inside `.table-w
 Use **only** when the paper provides an explicit analytical equation or measured parameter grid (never invent speculative curves):
 - 1–3 `<input type="range">` controls inside `.live-controls`, one clean pure `update()` function updating an inline SVG chart/readout, mark the paper's measured default value, and clearly state the exact equation (or label simplified intuition models `"机理示意"`).
 
-### 3.7 Built-In Automatic Features & Canonical Page Shell
-Always start `body.html` with this canonical shell so scroll-spy, collapsible `本篇图表` / `核心公式` drawers, reading progress, and right-margin marginalia attach cleanly:
+### 3.7 Canonical Page Shell, Native CSS Class Quick-Reference & Built-In Features
+Always start `body.html` with this canonical shell so scroll-spy, collapsible `本篇插图` / `本篇表格` drawers, reading progress, and right-margin marginalia attach cleanly:
 
 ```html
 <div id="scroll-progress" aria-hidden="true"></div>
@@ -168,6 +168,21 @@ Always start `body.html` with this canonical shell so scroll-spy, collapsible `�
   <main class="article-main">...</main>
 </div>
 ```
+
+**Morandi Native Layout Class Quick-Reference** *(use these directly—no need to inspect `assets/theme-morandi.css`)*:
+
+| Component | Exact Class Structure (`assets/theme-morandi.css`) |
+|---|---|
+| **Hero & KPI Strip** | `.hero-card` → `.hero-accent-bar` + `.hero-body` (`.hero-kicker`, `h1`, `.hero-subtitle`, `.meta-ribbon` → `.meta-item` `span`/`strong`) + `.kpi-grid` (4-col) → `.kpi-cell` (`.kpi-num` + `.kpi-teal`/`.kpi-sage`/`.kpi-ochre`/`.kpi-terra`, `.kpi-label`, `.kpi-sub`) |
+| **Executive Summary** | `.exec-summary` → `.exec-summary-title` + `<p>` |
+| **Section Heading** | `<section id="sec-01">` → `<h2><span class="sec-idx">01</span> Title</h2>` |
+| **Equation Card** | `.eq-box[id]` → `.eq-label` (`<span>Title</span><span>Sect. X</span>`) + `$$...$$` + optional `.eq-note` |
+| **Figure Frame** | `<figure class="fig-frame [fig-steps]" id="fig-1" data-lightbox-title="...">` → `.fig-header` (`.fig-title`, `.fig-actions` → `button.btn-zoom[data-zoom-btn]`) + `.fig-svg-wrap.fig-zoomable` + `figcaption.fig-caption` |
+| **Table Frame** | `.table-wrap[id][data-table-title]` → `table[data-interactive \| data-sym-table][.compact-table]` (numeric `.num`, summary `tr.row-total`, deltas `.delta-pos`/`.delta-neg`/`.delta-neu`, extrema `th[data-better="high"\|"low"]`) |
+| **Small Multiples (4-col)** | `.sm-grid` → `.sm-card` (`.sm-head` → `.sm-name` + `.sm-k`, `.sm-desc`) |
+| **Evidence Boundary (2×2)** | `.audit-grid` → `.audit-card` (`.sev-high` / `.sev-mid` / `.sev-scope` / `.sev-sys`, `.audit-title`, `<p>`) |
+| **Transfer / Takeaways (3-col)** | `.transfer-grid` → `.transfer-card` (`.transfer-num`, `<h4>`, `<p>`) |
+| **Live Explorer / Sources** | `.live-card` (`.live-head`, `.live-controls` → `.live-slider-row`, `.live-readout`); `.sources-box` (`<h3>` + `<ul>`); badges `.pill` + `.pill-teal`/`.pill-sage`/`.pill-ochre`/`.pill-terra` |
 
 `assets/widgets.js` enables these automatically on every assembled monograph:
 - **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ restrained Midnight Slate Dark toggle (persisted via `localStorage`).

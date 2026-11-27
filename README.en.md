@@ -149,7 +149,7 @@ paper-deep-reader/
 ├── scripts/
 │   ├── fetch_paper.py                 # Stdlib-only fetcher (arXiv / OA DOI / PDF URL / Zotero 7+)
 │   ├── extract_pdf.py                 # PyMuPDF text extraction & verification page renderer
-│   ├── assemble_html.py               # Single-file HTML bundler (SVG cleaner, ID prefixer, --offline-katex)
+│   ├── assemble_html.py               # Single-file HTML bundler (SVG/image inline optimizer, ID prefixer, --offline-katex)
 │   ├── qa_static.py                   # Static QA (KaTeX, IDs, interactive bindings, clichés, node --check)
 │   └── qa_browser_shots.py            # Cross-platform 1440px visual QA slicer & DOM geometric/runtime auditor
 ├── docs/images/                       # README showcase screenshots
