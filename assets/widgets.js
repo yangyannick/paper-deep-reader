@@ -17,8 +17,9 @@
   const ui = isZh
     ? {
         outlineCap: '文章大纲',
-        foldFigs: '本篇图表',
-        foldEqs: '核心公式',
+        foldFigs: '本篇插图',
+        foldTables: '本篇表格',
+        symTableTitle: '符号体系表',
         secProgress: (i, n) => '第 ' + i + ' / ' + n + ' 节',
         readMin: (m) => '约 ' + m + ' 分钟',
         fontDec: '减小字号',
@@ -70,7 +71,8 @@
     : {
         outlineCap: 'Contents',
         foldFigs: 'Figures',
-        foldEqs: 'Equations',
+        foldTables: 'Tables',
+        symTableTitle: 'Symbol Table',
         secProgress: (i, n) => 'Sec ' + i + ' / ' + n,
         readMin: (m) => '~' + m + ' min',
         fontDec: 'Decrease font size',
@@ -320,11 +322,12 @@
       if (heading && !heading.textContent.trim()) heading.textContent = ui.outlineCap;
 
       const figs = Array.from(mainScope.querySelectorAll('.fig-frame'));
-      const eqs = Array.from(mainScope.querySelectorAll('.eq-box'));
+      const tables = Array.from(mainScope.querySelectorAll('.table-wrap, .explorer-card'))
+        .filter(el => !(el.classList.contains('table-wrap') && el.closest('.explorer-card')));
       figs.forEach((f, i) => { if (!f.id) f.id = 'pdr-fig-' + (i + 1); });
-      eqs.forEach((e, i) => { if (!e.id) e.id = 'pdr-eq-' + (i + 1); });
+      tables.forEach((t, i) => { if (!t.id) t.id = 'pdr-tab-' + (i + 1); });
 
-      if (figs.length || eqs.length) {
+      if (figs.length || tables.length) {
         const foldGroup = document.createElement('div');
         foldGroup.className = 'toc-fold-group';
 
@@ -360,16 +363,27 @@
         if (figs.length) {
           const figItems = figs.map((f, i) => {
             const titleEl = f.querySelector('.fig-title');
-            return { el: f, text: titleEl ? titleEl.textContent.replace(/\s+/g, ' ').trim() : ('Fig. ' + (i + 1)) };
+            return { el: f, text: titleEl ? titleEl.textContent.replace(/\s+/g, ' ').trim() : ((isZh ? '图 ' : 'Fig. ') + (i + 1)) };
           });
           foldGroup.appendChild(buildFold(ui.foldFigs, figItems));
         }
-        if (eqs.length) {
-          const eqItems = eqs.map((eq, i) => {
-            const lbl = eq.querySelector('.eq-label > span:first-child') || eq.querySelector('.eq-label');
-            return { el: eq, text: lbl ? lbl.textContent.replace(/\s+/g, ' ').trim() : ('Eq. ' + (i + 1)) };
+        if (tables.length) {
+          const tabItems = tables.map((tw, i) => {
+            const innerTbl = tw.querySelector('table');
+            let title = (tw.getAttribute('data-table-title') || (innerTbl && innerTbl.getAttribute('data-table-title')) || '').trim();
+            if (!title) {
+              const cap = tw.querySelector('caption, .fig-title, .explorer-title, h3, h4');
+              if (cap) title = cap.textContent.replace(/\s+/g, ' ').trim();
+            }
+            if (!title) {
+              const prev = tw.previousElementSibling;
+              if (prev && /^H[34]$/i.test(prev.tagName)) title = prev.textContent.replace(/\s+/g, ' ').trim();
+            }
+            if (!title && innerTbl && innerTbl.hasAttribute('data-sym-table')) title = ui.symTableTitle;
+            if (!title) title = (isZh ? '表 ' : 'Table ') + (i + 1);
+            return { el: tw, text: title };
           });
-          foldGroup.appendChild(buildFold(ui.foldEqs, eqItems));
+          foldGroup.appendChild(buildFold(ui.foldTables, tabItems));
         }
         tocList.insertAdjacentElement('afterend', foldGroup);
       }
@@ -952,11 +966,12 @@
 
   // 7. Declarative Interactive Data Tables (table[data-interactive])
   (function initInteractiveTables() {
-    function parseNum(raw) {
+    function parseStrictNum(raw) {
       const s = (raw || '').replace(/,/g, '').replace(/[−–—]/g, '-').trim();
       if (!s || /^(-|n\/a|na|—|–)$/i.test(s)) return null;
-      const m = s.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
-      return m ? Number(m[0]) : null;
+      if (/^\d{4}-\d{2}/.test(s) || /\//.test(s)) return null;
+      const m = s.match(/^[~≈<>≤≥±+]?\s*([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)(?:\s*±\s*\d+(?:\.\d+)?)?\s*(?:[%×x]|[A-Za-zµμ°]{1,6})?$/);
+      return m ? Number(m[1]) : null;
     }
 
     document.querySelectorAll('table[data-interactive]').forEach(table => {
@@ -976,16 +991,21 @@
       const ths = headRows.length === 1 ? Array.from(headRows[0].querySelectorAll('th')) : [];
       const canSort = !hasBodySpan && !hasHeadSpan && dataRows.length >= 5 && ths.length > 0;
 
-      // Detect numeric columns for extrema highlight
-      const numericCols = [];
+      // Extrema highlighting strictly honors AI-declared data-better="high"|"low" columns only
+      const extremaCols = [];
+      const sortNumericCols = new Set();
       if (!hasBodySpan && ths.length) {
         ths.forEach((th, colIdx) => {
+          const dir = (th.getAttribute('data-better') || '').trim().toLowerCase();
+          if (dir === 'high' || dir === 'low') {
+            extremaCols.push({ colIdx, lowBetter: dir === 'low' });
+          }
           let nums = 0;
           dataRows.forEach(r => {
             const td = r.children[colIdx];
-            if (td && parseNum(td.textContent) !== null) nums++;
+            if (td && parseStrictNum(td.textContent) !== null) nums++;
           });
-          if (nums >= Math.max(3, Math.ceil(dataRows.length * 0.6))) numericCols.push(colIdx);
+          if (nums >= Math.max(3, Math.ceil(dataRows.length * 0.6))) sortNumericCols.add(colIdx);
         });
       }
 
@@ -1006,7 +1026,7 @@
 
       let extremaOn = false;
       let extremaBtn = null;
-      if (numericCols.length && dataRows.length >= 4) {
+      if (extremaCols.length && dataRows.length >= 2) {
         extremaBtn = document.createElement('button');
         extremaBtn.type = 'button';
         extremaBtn.className = 'tbl-btn';
@@ -1029,13 +1049,14 @@
         if (!extremaOn) return;
         const visibleRows = dataRows.filter(r => !r.hidden);
         if (visibleRows.length < 2) return;
-        numericCols.forEach(colIdx => {
-          const vals = visibleRows.map(r => ({ td: r.children[colIdx], v: parseNum(r.children[colIdx] && r.children[colIdx].textContent) })).filter(x => x.v !== null);
+        extremaCols.forEach(({ colIdx, lowBetter }) => {
+          const vals = visibleRows
+            .map(r => ({ td: r.children[colIdx], v: parseStrictNum(r.children[colIdx] && r.children[colIdx].textContent) }))
+            .filter(x => x.v !== null);
           if (vals.length < 2) return;
           const minV = Math.min(...vals.map(x => x.v));
           const maxV = Math.max(...vals.map(x => x.v));
           if (minV === maxV) return;
-          const lowBetter = ths[colIdx] && ths[colIdx].getAttribute('data-better') === 'low';
           const bestV = lowBetter ? minV : maxV;
           const worstV = lowBetter ? maxV : minV;
           vals.forEach(x => {
@@ -1090,7 +1111,7 @@
 
           th.addEventListener('click', () => {
             if (sortCol === colIdx) sortDir = -sortDir;
-            else { sortCol = colIdx; sortDir = numericCols.includes(colIdx) ? -1 : 1; }
+            else { sortCol = colIdx; sortDir = sortNumericCols.has(colIdx) ? -1 : 1; }
 
             ths.forEach((h, j) => {
               h.classList.toggle('is-sorted', j === sortCol);
@@ -1101,8 +1122,8 @@
             dataRows.sort((a, b) => {
               const ta = (a.children[colIdx] ? a.children[colIdx].textContent : '').trim();
               const tb = (b.children[colIdx] ? b.children[colIdx].textContent : '').trim();
-              const na = parseNum(ta);
-              const nb = parseNum(tb);
+              const na = parseStrictNum(ta);
+              const nb = parseStrictNum(tb);
               if (na !== null && nb !== null) return (na - nb) * sortDir;
               if (na !== null) return -1;
               if (nb !== null) return 1;

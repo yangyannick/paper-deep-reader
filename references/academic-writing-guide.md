@@ -15,18 +15,19 @@ Organize the standalone HTML monograph in a calm, linear scholarly progression t
    - **On-demand compact equation notes (`.eq-note`, no rigid dual-paragraph boilerplate)**: Do NOT stamp a fixed multi-paragraph template onto every equation. If a formula is straightforward or already clear from the preceding sentence, omit `.eq-note` and continue the prose. Add a crisp 1–3 line `.eq-note` inside `.eq-box` **only when** the formula introduces new local symbols, non-obvious operators, or key structural factors whose algebraic role is not immediately obvious at a glance—and do not repeat the same wording in the next paragraph.
    - **Semantic Global Symbol Table (`<table data-sym-table>`)**: Collect both (a) core quantities, parameters, and metrics that recur across sections, figures, or tables, **and** (b) key mathematical objects/operators inside the paper's core equations even if they appear only once. Keep the table clean and disciplined by excluding pure loop/summation indices ($i, j, k$), standard textbook notation ($\mathbb{E}[\cdot], \mathrm{Var}(\cdot)$), and throwaway single-example dummy variables (explain those briefly inline next to the formula instead). Wire recurring symbols in later sections with `data-sym` hover quick-cards.
    - Carry at least one concrete, small-scale numerical or concrete-instance worked example all the way from input to output (and inverse/verification closure when applicable). Never write "substituting gives..." without evaluating actual values.
-6. **Section 03 · Experimental Design & Empirical Analysis**:
+6. **Section 03 · Experimental Design, Tables & Empirical Analysis**:
    - Datasets, baselines, metrics, and any hidden accounting rules (e.g., side-information overhead, excluded subsets from footnotes).
+   - **Keep tables inline where discussed**: Place every benchmark, ablation, runtime, or comparison table right inside the subsection that analyzes it (enhanced with `<table data-interactive>` and `data-table-title` for sidebar indexing) rather than exiling normal tables into a separate "data dump" section. Only fold an oversized raw per-sample listing (e.g., 30+ individual cases) inside `<details class="deep-dive">` or an optional appendix so it does not interrupt prose flow.
    - Pair high-clarity quantitative SVG plots with mechanistic interpretation, explicitly separating what the authors proved/explained from analytical mechanism inferences.
-   - Highlight 3–4 representative success/failure archetypes via Small Multiples cards.
-7. **Section 04 · Interactive Original Data Explorer** (when the paper has substantive multi-row benchmark tables): Preserve complete verified raw numbers in a filterable/searchable interactive table so readers can audit any single case without interrupting the main prose flow.
-8. **Section 05 · Component Hierarchy & Evidence Boundaries**:
-   - **5.1 Component Role Table**: Classify each major design choice as *Indispensable Core*, *Conditional Gain*, *Unablated Key Mechanism*, *Prototype Simplification*, or *Architectural Boundary Choice*, citing the exact table/control or stating openly when no ablation was run.
-   - **5.2 Evidence Boundary Grid (Balanced 2×2)**: Rank limitations by impact severity (weakens headline claim, missing baseline/ablation, sample/regime truncation, unmeasured system cost).
-9. **Section 06 · Engineering Insights & Domain Transfer + Sources**:
+   - Highlight 3–4 representative success/failure archetypes via Small Multiples cards when informative.
+7. **Section 04 · Component Hierarchy & Evidence Boundaries**:
+   - **Component Role Table**: Classify each major design choice as *Indispensable Core*, *Conditional Gain*, *Unablated Key Mechanism*, *Prototype Simplification*, or *Architectural Boundary Choice*, citing the exact table/control or stating openly when no ablation was run.
+   - **Evidence Boundary Grid (Balanced 2×2)**: Rank limitations by impact severity (weakens headline claim, missing baseline/ablation, sample/regime truncation, unmeasured system cost).
+8. **Section 05 · Engineering Insights & Domain Transfer + Sources**:
    - Practical guidance on when to adopt vs when to avoid or adapt the method.
    - If the user mentions a target domain or research problem, include a dedicated transfer analysis; otherwise focus on general engineering deployment boundaries.
    - Close with a compact `.sources-box` listing the exact citation, DOI, and a concise 1–2 line reading scope note.
+   *(Adapt section numbering naturally to the paper's actual structure rather than forcing artificial splits.)*
 
 ## 2. Prose & De-Noising Discipline
 

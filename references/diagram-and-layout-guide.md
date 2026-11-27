@@ -43,8 +43,9 @@ Every paper monograph should pair a **bird's-eye whole-paper orientation** with 
 
 ### Vector SVG Craft Rules
 1. **Zero text/line collisions**: Keep ≥32–44px horizontal gaps between stage boxes; route feedback tracks cleanly above/below boxes; use crisp Unicode subscripts (`xₜ`, `yₜ`, `Iₙ₋₁`, `x̂ₜ`) inside `<text>` because KaTeX ignores `<svg>`.
-2. **Target-language consistency**: In Chinese monographs, every diagram header, stage title, and branch label must be in Simplified Chinese (keeping standard English acronyms and math variables).
-3. **Clear granularity separation**: Keep the top-of-article visual focused on the **whole-paper logic panorama** (bird's-eye arc or taxonomy), and Section 02's diagram focused on **formula-level data flow, internal mechanics, and worked-example stepping**—never duplicate the same overview twice.
+2. **Visual grouping & edges must match true logical topology**: Parallel elements belonging to the same stage or category must have clear visual grouping so readers immediately see what belongs together; every arrow or connector must express a genuine causal, sequential, or parent–child relationship—never draw forced cross-links between unrelated sibling nodes just to make a layout look symmetric.
+3. **Target-language consistency**: In Chinese monographs, every diagram header, stage title, and branch label must be in Simplified Chinese (keeping standard English acronyms and math variables).
+4. **Clear granularity separation**: Keep the top-of-article visual focused on the **whole-paper logic panorama** (bird's-eye arc or taxonomy), and Section 02's diagram focused on **formula-level data flow, internal mechanics, and worked-example stepping**—never duplicate the same overview twice.
 
 ---
 
@@ -123,10 +124,11 @@ Use **only** when two views share identical coordinates or an identical architec
   2. In later sections, mark recurring symbols in prose with `<span class="sym-ref" data-sym="T">$T$</span>` (or inline fallback `<span class="sym-ref" data-sym="T" data-sym-tip="自相关训练窗长 (samples)">$T$</span>`). Hovering/clicking displays a Morandi quick-card with a one-click `定位到符号表 ↗` jump!
 
 ### 3.4 Declarative Interactive Tables (`<table data-interactive>`)
-Add `data-interactive` to any clean benchmark/results `<table>` inside `.table-wrap`:
-- Automatically adds search filtering, visible row count, one-click `复制 CSV`, numeric column `极值高亮` (add `data-better="low"` on `<th>` for lower-is-better metrics like latency/MSE/bpp), and click-to-sort headers while keeping `.row-total` pinned at the bottom.
+Add `data-interactive` to any clean benchmark/results `<table>` inside `.table-wrap` (and set `data-table-title="表 1 · ..."` on `.table-wrap` or use `<caption>` so the left sidebar's `本篇表格` drawer shows a crisp label):
+- Automatically adds search filtering, visible row count, one-click `复制 CSV`, and click-to-sort headers while keeping `.row-total` pinned at the bottom.
+- **Semantic extrema highlighting (strictly opt-in via `data-better`)**: Add `data-better="high"` or `data-better="low"` **only** on `<th>` columns representing genuinely comparable performance metrics on a common scale. Never mark categorical labels, dataset names, method parameters, years, or mixed-scale non-comparable columns; `widgets.js` strictly highlights only columns carrying `data-better` (and hides the `极值高亮` button when no column declares it).
 - Automatically skips sorting on tables with `rowspan`/`colspan` or `< 5` data rows so merged academic headers are never scrambled.
-- Keep `.explorer-card` only when a paper truly needs multi-tab dataset/method switching across separate sub-tables.
+- Keep tables inline inside the subsection that discusses them; use `<details class="deep-dive">` or `.explorer-card` only when a paper genuinely has an oversized raw per-sample table (e.g., 30+ rows) or multi-tab sub-tables.
 
 ### 3.5 Progressive Disclosure Drawers (`<details class="deep-dive">`), On-Demand Equation Notes (`.eq-note`) & Cross-References (`<a class="xref">`, `data-jump`)
 - Wrap lengthy algebraic derivations, secondary ablations, or verbatim quotes in:
@@ -171,7 +173,7 @@ Always start `body.html` with this canonical shell so scroll-spy, collapsible `�
 
 `assets/widgets.js` enables these automatically on every assembled monograph:
 - **Quiet Masthead Controls**: `A−` / `A+` font scale and Warm Paper Light ↔ restrained Midnight Slate Dark toggle (persisted via `localStorage`).
-- **Frameless Editorial Left Sidebar**: Clean borderless section outline rail with quiet collapsible `本篇图表` / `核心公式` drawers below (hidden when 0 equations), plus mini progress bar and estimated reading time.
+- **Frameless Editorial Left Sidebar**: Clean borderless section outline rail with quiet collapsible `本篇插图` / `本篇表格` (`Figures` / `Tables`) drawers below, plus mini progress bar and estimated reading time.
 - **Zero-Clutter Marginalia & Exportable Notes**: Selecting any passage (including across inline `<code>` and KaTeX formulas) pops `✎ 批注 | ? 提问`; each `.fig-frame` gets a subtle `✎` icon (with inline `批注 / 疑问` switch). On wide screens (`≥ 1340px`), saved notes appear automatically as aligned right-margin marginalia linked to soft inline highlights (completely empty when 0 notes), while the Masthead `✎ 笔记 N` pill provides centralized review and one-click Markdown copy / `.md` download.
 - **Interactive 120fps Vector Pan & Zoom Lightbox**: Works on every `.fig-frame` SVG or `<img>` (including cropped original figures), and **automatically mounts synced `.fig-steps` stepper controls (`←` / `→` / `Space` + step notes) and `data-set-view` Before/After toggles inside the Lightbox footer** so readers can step and flip views live without losing pan/zoom position.
 
